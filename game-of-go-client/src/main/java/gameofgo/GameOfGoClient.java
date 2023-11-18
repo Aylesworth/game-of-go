@@ -1,5 +1,6 @@
 package gameofgo;
 
+import gameofgo.component.GamePanel;
 import gameofgo.component.MainFrame;
 import gameofgo.component.SignInPanel;
 import gameofgo.service.SocketService;

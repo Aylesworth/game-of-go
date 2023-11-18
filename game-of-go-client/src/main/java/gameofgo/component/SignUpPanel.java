@@ -81,22 +81,21 @@ public class SignUpPanel extends VBox {
             return;
         }
 
+
+        socketService.on("OK", message -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setHeaderText(message.payload());
+            alert.showAndWait();
+
+            MainFrame.getInstance().setCenter(new SignInPanel());
+        });
+
+        socketService.on("ERROR", message -> lblMessage.setText(message.payload()));
+
         socketService.send(new Message(
                 "SIGNUP",
                 txtUsername.getText() + '\n' + txtPassword.getText() + '\n'
         ));
-
-        Message response = socketService.receive();
-
-        if (response.messageType().equals("OK")) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setHeaderText(response.payload());
-            alert.showAndWait();
-
-            MainFrame.getInstance().setCenter(new SignInPanel());
-        } else {
-            lblMessage.setText(response.payload());
-        }
     }
 
     private void validate() throws Exception {

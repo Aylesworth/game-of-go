@@ -55,14 +55,20 @@ public class HomePanel extends BorderPane {
         });
 
         socketService.on("INVRES", message -> {
-           String[] params = message.payload().split("\n");
-           String opponent = params[0];
-           String reply = params[1];
+            String[] params = message.payload().split("\n");
+            String opponent = params[0];
+            String reply = params[1];
 
-           if (reply.equals("ACCEPT"))
-               System.out.println("Player %s accepted the challenge.".formatted(opponent));
-           else
-               System.out.println("Player %s rejected the challenge.".formatted(opponent));
+            if (reply.equals("ACCEPT")) {
+                System.out.println("Player %s accepted the challenge.".formatted(opponent));
+            } else {
+                System.out.println("Player %s rejected the challenge.".formatted(opponent));
+            }
+        });
+
+        socketService.on("SETUP", message -> {
+            int color = Integer.parseInt(message.payload().substring(0, 1));
+            MainFrame.getInstance().setCenter(new GamePanel(color));
         });
 
         socketService.send(new Message("LSTONL", ""));

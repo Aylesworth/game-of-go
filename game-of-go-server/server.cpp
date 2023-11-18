@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <time.h>
 #include <string>
 #include <set>
 #include "service.hpp"
@@ -86,6 +87,7 @@ void handleClientDisconnect(int clientSocket) {
 void *handleReceive(void *arg) {
     int clientSocket = *(int *) arg;
     Account *account;
+    int opponentSocket = -1;
 
     while (1) {
         char buff[BUFF_SIZE];
@@ -161,14 +163,14 @@ void *handleReceive(void *arg) {
 
             handleSend(clientSocket, "LSTONL", payload);
         } else if (strcmp(messageType, "INVITE") == 0) {
-            char *target = strtok(payload, "\n");
-            int targetSocket = findSocketByUsername(target);
+            char *opponent = strtok(payload, "\n");
+            opponentSocket = findSocketByUsername(opponent);
 
-            handleSend(targetSocket, "INVITE", (account->username + "\n").c_str());
+            handleSend(opponentSocket, "INVITE", (account->username + "\n").c_str());
         } else if (strcmp(messageType, "INVRES") == 0) {
             char *opponent = strtok(payload, "\n");
             char *reply = strtok(NULL, "\n");
-            int opponentSocket = findSocketByUsername(opponent);
+            opponentSocket = findSocketByUsername(opponent);
 
             memset(buff, 0, BUFF_SIZE);
             sprintf(buff, "%s\n%s\n", account->username.c_str(), reply);
@@ -176,7 +178,24 @@ void *handleReceive(void *arg) {
 
             if (strcmp(reply, "ACCEPT") == 0) {
                 printf("Establish game between %s and %s\n", account->username.c_str(), opponent);
+
+                srand(time(NULL));
+                int randomColor = rand() % 2;
+
+                memset(buff, 0, BUFF_SIZE);
+                sprintf(buff, "%d\n", randomColor);
+                handleSend(clientSocket, "SETUP", buff);
+
+                memset(buff, 0, BUFF_SIZE);
+                sprintf(buff, "%d\n", 1 - randomColor);
+                handleSend(opponentSocket, "SETUP", buff);
+            } else {
+                opponentSocket = -1;
             }
+        } else if (strcmp(messageType, "MOVE") == 0) {
+            char *posLabel = strtok(payload, "\n");
+            // TODO: Validate move
+            handleSend(opponentSocket, "MOVE", payload);
         }
     }
 
