@@ -12,13 +12,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SocketService {
-    private static SocketService INSTANCE;
+    private static SocketService instance;
 
     public static SocketService getInstance() {
-        if (INSTANCE == null)
-            INSTANCE = new SocketService();
+        if (instance == null)
+            instance = new SocketService();
 
-        return INSTANCE;
+        return instance;
     }
 
     private static final String SERVER_ADDRESS = "localhost";

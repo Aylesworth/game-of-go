@@ -101,7 +101,7 @@ void *handleReceive(void *arg) {
                 return NULL;
             }
 
-            printf("buff = %s\n", buff);
+//            printf("buff = %s\n", buff);
 
             int headerEndIndex = strcspn(buff, "\n");
             buff[headerEndIndex] = '\0';
@@ -165,6 +165,18 @@ void *handleReceive(void *arg) {
             int targetSocket = findSocketByUsername(target);
 
             handleSend(targetSocket, "INVITE", (account->username + "\n").c_str());
+        } else if (strcmp(messageType, "INVRES") == 0) {
+            char *opponent = strtok(payload, "\n");
+            char *reply = strtok(NULL, "\n");
+            int opponentSocket = findSocketByUsername(opponent);
+
+            memset(buff, 0, BUFF_SIZE);
+            sprintf(buff, "%s\n%s\n", account->username.c_str(), reply);
+            handleSend(opponentSocket, "INVRES", buff);
+
+            if (strcmp(reply, "ACCEPT") == 0) {
+                printf("Establish game between %s and %s\n", account->username.c_str(), opponent);
+            }
         }
     }
 

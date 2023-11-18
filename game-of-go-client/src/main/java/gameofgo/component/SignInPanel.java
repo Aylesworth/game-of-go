@@ -2,6 +2,7 @@ package gameofgo.component;
 
 import gameofgo.common.Configs;
 import gameofgo.common.Message;
+import gameofgo.common.SessionStorage;
 import gameofgo.service.SocketService;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -61,6 +62,12 @@ public class SignInPanel extends VBox {
         );
 
         btnSignIn.setOnMouseClicked(this::onSubmit);
+
+        socketService.on("OK", (message) -> {
+            SessionStorage.setItem("username", txtUsername.getText());
+            MainFrame.getInstance().setCenter(new HomePanel());
+        });
+        socketService.on("ERROR", (message -> lblMessage.setText(message.payload())));
     }
 
     private void onSubmit(MouseEvent event) {
@@ -75,17 +82,6 @@ public class SignInPanel extends VBox {
                 "SIGNIN",
                 txtUsername.getText() + '\n' + txtPassword.getText() + '\n'
         ));
-        socketService.on("OK", (message) -> MainFrame.getInstance().setCenter(new HomePanel()));
-        socketService.on("ERROR", (message -> lblMessage.setText(message.payload())));
-
-
-//        Message response = socketService.receive();
-//
-//        if (response.messageType().equals("OK")) {
-//            MainFrame.getInstance().setCenter(new HomePanel());
-//        } else {
-//            lblMessage.setText(response.payload());
-//        }
     }
 
     private void validate() throws Exception {
