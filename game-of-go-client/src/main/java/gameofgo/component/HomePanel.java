@@ -3,7 +3,9 @@ package gameofgo.component;
 import gameofgo.common.Message;
 import gameofgo.service.SocketService;
 import javafx.geometry.Pos;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -27,6 +29,14 @@ public class HomePanel extends BorderPane {
         });
         socketService.on("CHGONL",
                 message -> socketService.send(new Message("LSTONL", "")));
+
+        socketService.on("INVITE", message -> {
+            String sender = message.payload().split("\n")[0];
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setHeaderText("You've got a challenge from %s. Do you want to accept?".formatted(sender));
+            alert.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
+            alert.showAndWait();
+        });
     }
 
     private class OnlineBox extends VBox {
@@ -52,6 +62,9 @@ public class HomePanel extends BorderPane {
             if (status.equals("Available"))
                 getChildren().add(btnInvite);
             getChildren().add(lblStatus);
+
+            btnInvite.setOnMouseClicked(event ->
+                    socketService.send(new Message("INVITE", username + "\n")));
         }
     }
 }

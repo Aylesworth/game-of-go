@@ -44,7 +44,7 @@ int findSocketByUsername(string username) {
     return -1;
 }
 
-void handleSend(int clientSocket, char *messageType, char *payload) {
+void handleSend(int clientSocket, char *messageType, const char *payload) {
     char buff[BUFF_SIZE];
     int bytesSent;
     int blockTypeSize = 4;
@@ -85,6 +85,7 @@ void handleClientDisconnect(int clientSocket) {
 
 void *handleReceive(void *arg) {
     int clientSocket = *(int *) arg;
+    Account *account;
 
     while (1) {
         char buff[BUFF_SIZE];
@@ -92,6 +93,7 @@ void *handleReceive(void *arg) {
         payload[0] = '\0';
 
         do {
+            memset(buff, 0, BUFF_SIZE);
             int bytesReceived = recv(clientSocket, buff, BUFF_SIZE - 1, 0);
             if (bytesReceived <= 0) {
                 printf("Client disconnected.\n");
@@ -117,6 +119,8 @@ void *handleReceive(void *arg) {
 
         } while (strcmp(blockType, "LAST") != 0);
 
+        strcat(payload, "\0");
+
         printf("Received:\n%s\n", payload);
 
         if (strcmp(messageType, "SIGNUP") == 0) {
@@ -130,11 +134,12 @@ void *handleReceive(void *arg) {
                     break;
             }
         } else if (strcmp(messageType, "SIGNIN") == 0) {
-            Account *account = doSignIn(payload);
+            account = doSignIn(payload);
             if (account == NULL) {
                 handleSend(clientSocket, "ERROR", "Wrong username or password");
             } else {
                 handleSend(clientSocket, "OK", "Signed in successfully");
+
                 clients.insert(ClientInfo(clientSocket, account));
                 notifyOnlineStatusChange();
             }
@@ -155,6 +160,11 @@ void *handleReceive(void *arg) {
             }
 
             handleSend(clientSocket, "LSTONL", payload);
+        } else if (strcmp(messageType, "INVITE") == 0) {
+            char *target = strtok(payload, "\n");
+            int targetSocket = findSocketByUsername(target);
+
+            handleSend(targetSocket, "INVITE", (account->username + "\n").c_str());
         }
     }
 
