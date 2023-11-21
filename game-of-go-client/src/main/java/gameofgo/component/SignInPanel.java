@@ -63,11 +63,11 @@ public class SignInPanel extends VBox {
 
         btnSignIn.setOnMouseClicked(this::onSubmit);
 
-        socketService.on("OK", (message) -> {
+        socketService.on("OK", message -> {
             SessionStorage.setItem("username", txtUsername.getText());
             MainFrame.getInstance().setCenter(new HomePanel());
         });
-        socketService.on("ERROR", (message -> lblMessage.setText(message.payload())));
+        socketService.on("ERROR", message -> lblMessage.setText(message.payload()));
     }
 
     private void onSubmit(MouseEvent event) {

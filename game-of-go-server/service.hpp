@@ -31,7 +31,7 @@ char *encodeMD5(const char *input) {
     return md5_string;
 }
 
-int doCreateAccount(char *payload) {
+int handleCreateAccount(char *payload) {
     char *username = strtok(payload, "\n");
     char *password = strtok(NULL, "\n");
 
@@ -46,7 +46,7 @@ int doCreateAccount(char *payload) {
     return 0;
 }
 
-Account *doSignIn(char *payload) {
+Account *handleSignIn(char *payload) {
     char *username = strtok(payload, "\n");
     char *password = strtok(NULL, "\n");
 

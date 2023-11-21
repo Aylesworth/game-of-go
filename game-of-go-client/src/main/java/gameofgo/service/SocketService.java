@@ -82,7 +82,7 @@ public class SocketService {
                 String response = new String(bytes, 0, bytesRead, "UTF-8");
 
                 String[] contents = response.split("\n", 2);
-                String[] header = contents[0].split(" ", 2);
+                String[] header = contents[0].split(" ");
                 messageType = header[0];
                 blockType = header[1];
                 payloadBuilder.append(contents[1]);
