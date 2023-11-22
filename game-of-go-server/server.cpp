@@ -13,6 +13,7 @@
 #include "controller.hpp"
 #include "service.hpp"
 #include "entity.hpp"
+#include "go_engine.hpp"
 
 using namespace std;
 
@@ -30,6 +31,19 @@ void *handleClient(void *arg) {
 }
 
 int main() {
+    GoGame *game = new GoGame(13);
+    game->play("C5", 2);
+    game->play("D5", 1);
+    game->play("B5", 1);
+    game->play("C3", 1);
+    game->play("C7", 1);
+    game->play("B4", 1);
+    game->play("B6", 1);
+    game->play("D4", 1);
+    game->play("D6", 1);
+    pair<float,float> scores = game->calculateScore();
+    printf("%f %f\n", scores.first, scores.second);
+
     int serverSocket, clientSocket;
     struct sockaddr_in server, client;
     socklen_t sinSize = sizeof(struct sockaddr_in);

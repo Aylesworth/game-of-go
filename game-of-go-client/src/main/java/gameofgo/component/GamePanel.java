@@ -5,7 +5,9 @@ import gameofgo.service.SocketService;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
 public class GamePanel extends BorderPane {
@@ -14,7 +16,7 @@ public class GamePanel extends BorderPane {
     private static final double FULL_WIDTH = 720;
     private static final double PADDING = 40;
 
-    private final int BOARD_SIZE = 19;
+    private final int BOARD_SIZE = 13;
     private final double CELL_WIDTH = (FULL_WIDTH - 2 * PADDING) / (BOARD_SIZE - 1);
     private final double STONE_RADIUS = CELL_WIDTH * 0.45;
     private final int MY_COLOR;
@@ -25,6 +27,7 @@ public class GamePanel extends BorderPane {
     private GraphicsContext gc;
     private String lastPosition;
     private int lastColor;
+    private String selectedPosition;
 
     public GamePanel(int color) {
         MY_COLOR = color;
@@ -57,20 +60,47 @@ public class GamePanel extends BorderPane {
             if (x < PADDING || x > FULL_WIDTH - PADDING || y < PADDING || y > FULL_WIDTH - PADDING)
                 return;
 
-            String label = coordinatesToLabel(new Point2D(x, y));
-            play(label, MY_COLOR);
-            myTurn = !myTurn;
+            selectedPosition = coordinatesToLabel(new Point2D(x, y));
 
-            socketService.send(new Message("MOVE", label));
+            socketService.send(new Message("MOVE", "" + MY_COLOR + '\n' + selectedPosition + '\n'));
+        });
+
+        Button btnPass = new Button("Pass");
+        btnPass.setOnMouseClicked(event -> {
+            socketService.send(new Message("MOVPAS", "" + MY_COLOR + '\n'));
+            myTurn = false;
+            btnPass.setDisable(true);
+        });
+
+        socketService.on("MOVERR", message -> {
         });
 
         socketService.on("MOVE", message -> {
-            String label = message.payload().split("\n")[0];
-            play(label, 1 - MY_COLOR);
+            String[] params = message.payload().split("\n");
+            int color = Integer.parseInt(params[0]);
+            String label = params[1];
+            play(label, color);
+
+            if (params.length > 2) {
+                String[] captured = params[2].split(" ");
+                for (String cap : captured) {
+                    removeStone(cap);
+                }
+            }
             myTurn = !myTurn;
+            if (myTurn) btnPass.setDisable(false);
         });
 
-        setLeft(gameBoard);
+        socketService.on("MOVPAS", message -> myTurn = true);
+
+        socketService.on("RESULT", message -> {
+            System.out.printf("You've got %.1f points%n", Float.parseFloat(message.payload().split("\n")[0]));
+            myTurn = false;
+        });
+
+        VBox container = new VBox(gameBoard, btnPass);
+
+        setLeft(container);
     }
 
     private void play(String positionLabel, int color) {
@@ -84,12 +114,12 @@ public class GamePanel extends BorderPane {
     private void putStone(String positionLabel, int color, boolean withMarker) {
         Point2D coordinates = labelToCoordinates(positionLabel);
 
-        gc.setFill(color == 0 ? Color.WHITE : Color.BLACK);
+        gc.setFill(color == 1 ? Color.BLACK : Color.WHITE);
         gc.fillOval(coordinates.getX() - STONE_RADIUS, coordinates.getY() - STONE_RADIUS, 2 * STONE_RADIUS, 2 * STONE_RADIUS);
 
         if (withMarker) {
-            gc.setStroke(color == 0 ? Color.BLACK : Color.WHITE);
-            gc.setLineWidth(2);
+            gc.setStroke(color == 1 ? Color.WHITE : Color.BLACK);
+            gc.setLineWidth(3);
             gc.strokeOval(coordinates.getX() - STONE_RADIUS / 2, coordinates.getY() - STONE_RADIUS / 2, STONE_RADIUS, STONE_RADIUS);
         }
     }

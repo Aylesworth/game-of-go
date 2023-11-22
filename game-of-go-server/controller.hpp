@@ -6,6 +6,12 @@
 #define GAME_OF_GO_SERVER_CONTROLLER_HPP
 
 #include "service.hpp"
+#include "go_engine.hpp"
+#include <pthread.h>
+#include <set>
+#include <map>
+
+using namespace std;
 
 #define BUFF_SIZE 1024
 
@@ -29,6 +35,9 @@ struct ClientInfo {
 };
 
 set<ClientInfo *> clients;
+
+map<int, GoGame *>
+        games;
 
 ClientInfo *findClientByUsername(string username) {
     for (const auto &client: clients) {
@@ -55,6 +64,13 @@ void handleClientDisconnect(int clientSocket) {
     }
 }
 
+int generateKey(int socket1, int socket2) {
+    int h1 = hash < int > {}(socket1);
+    int h2 = hash < int > {}(socket2);
+    int hash = (h1 + h2) ^ (h1 - h2) ^ (h2 - h1) ^ (h1 * h2) ^ (h1 / h2) ^ (h2 / h1) ^ (h1 % h2) ^ (h2 % h1);
+    return hash;
+}
+
 int handleSend(int clientSocket, const char *messageType, const char *payload) {
     char buff[BUFF_SIZE];
     int bytesSent;
@@ -78,7 +94,7 @@ int handleSend(int clientSocket, const char *messageType, const char *payload) {
     memset(buff, 0, BUFF_SIZE);
     sprintf(buff, "%s %s\n%s", messageType, "LAST", payload);
     bytesSent = send(clientSocket, buff, strlen(buff), 0);
-    printf("Sent:\n%s\n", buff);
+    printf("Sent to %d:\n%s\n", clientSocket, buff);
 
     return 1;
 }
@@ -98,7 +114,7 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
             return 0;
         }
 
-        printf("Received:\n%s\n", buff);
+        printf("Received from %d:\n%s\n", clientSocket, buff);
 
         int headerEndIndex = strcspn(buff, "\n");
         buff[headerEndIndex] = '\0';
@@ -137,18 +153,18 @@ void *handleRequest(void *arg) {
             int res = handleCreateAccount(payload);
             switch (res) {
                 case 0:
-                    handleSend(clientSocket, "OK    ", "Account created successfully");
+                    handleSend(clientSocket, "OK", "Account created successfully");
                     break;
                 case 1:
-                    handleSend(clientSocket, "ERROR ", "Username already used");
+                    handleSend(clientSocket, "ERROR", "Username already used");
                     break;
             }
         } else if (strcmp(messageType, "SIGNIN") == 0) {
             Account *account = handleSignIn(payload);
             if (account == NULL) {
-                handleSend(clientSocket, "ERROR ", "Wrong username or password");
+                handleSend(clientSocket, "ERROR", "Wrong username or password");
             } else {
-                handleSend(clientSocket, "OK    ", "Signed in successfully");
+                handleSend(clientSocket, "OK", "Signed in successfully");
 
                 thisClient = new ClientInfo(clientSocket, account);
                 clients.insert(thisClient);
@@ -188,23 +204,60 @@ void *handleRequest(void *arg) {
             if (strcmp(reply, "ACCEPT") == 0) {
                 printf("Establish game between %s and %s\n", thisClient->account->username.c_str(), opponent);
 
+                GoGame *game = new GoGame(13);
+                games[generateKey(clientSocket, opponentClient->socket)] = game;
+
                 srand(time(NULL));
-                int randomColor = rand() % 2;
+                int randomColor = rand() % 2 + 1;
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%d\n", randomColor);
-                handleSend(clientSocket, "SETUP ", buff);
+                handleSend(clientSocket, "SETUP", buff);
 
                 memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%d\n", 1 - randomColor);
-                handleSend(opponentClient->socket, "SETUP ", buff);
+                sprintf(buff, "%d\n", 3 - randomColor);
+                handleSend(opponentClient->socket, "SETUP", buff);
             } else {
                 opponentClient = NULL;
             }
-        } else if (strcmp(messageType, "MOVE  ") == 0) {
-            char *posLabel = strtok(payload, "\n");
-            // TODO: Validate move
-            handleSend(opponentClient->socket, "MOVE  ", payload);
+        } else if (strcmp(messageType, "MOVE") == 0) {
+            int color = atoi(strtok(payload, "\n"));
+            char *coords = strtok(NULL, "\n");
+            GoGame *game = games[generateKey(clientSocket, opponentClient->socket)];
+            if (game->play(coords, color)) {
+                memset(buff, 0, BUFF_SIZE);
+                sprintf(buff, "%d\n%s\n", color, coords);
+
+                vector <string> captured = game->getCaptured();
+                if (captured.size() > 0) {
+                    for (string cap: captured) {
+                        strcat(buff, (cap + " ").c_str());
+                    }
+                    strcat(buff, "\n");
+                }
+
+                handleSend(clientSocket, "MOVE", buff);
+                handleSend(opponentClient->socket, "MOVE", buff);
+            } else {
+                handleSend(clientSocket, "MOVERR", "");
+            }
+        } else if (strcmp(messageType, "MOVPAS") == 0) {
+            int color = atoi(strtok(payload, "\n"));
+            GoGame *game = games[generateKey(clientSocket, opponentClient->socket)];
+            if (game->pass() == 2) {
+                pair<float, float> scores = game->calculateScore();
+                memset(buff, 0, BUFF_SIZE);
+                sprintf(buff, "%.1f\n", color == 1 ? scores.first : scores.second);
+                handleSend(clientSocket, "RESULT", buff);
+
+                memset(buff, 0, BUFF_SIZE);
+                sprintf(buff, "%.1f\n", color == 1 ? scores.second : scores.first);
+                handleSend(opponentClient->socket, "RESULT", buff);
+            } else {
+                memset(buff, 0, BUFF_SIZE);
+                sprintf(buff, "%d\n", color);
+                handleSend(opponentClient->socket, "MOVPAS", buff);
+            }
         }
     }
 
