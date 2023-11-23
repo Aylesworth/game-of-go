@@ -49,6 +49,7 @@ public class SignInPanel extends VBox {
 
         lblMessage = new Label();
         lblMessage.setTextFill(Color.RED);
+        lblMessage.setWrapText(true);
 
         btnSignIn = new Button("Sign in");
 
@@ -70,10 +71,13 @@ public class SignInPanel extends VBox {
                 btnSignIn,
                 lblSignUp
         );
-        setMargin(lblTitle, new Insets(0,0,10,0));
-        setMargin(txtUsername, new Insets(0,0,10,0));
-        setMargin(txtPassword, new Insets(0,0,10,0));
-        setMargin(btnSignIn, new Insets(0,0,10,0));
+
+        Insets defaultMargin = new Insets(0, 0, 10, 0);
+        setMargin(lblTitle, defaultMargin);
+        setMargin(txtUsername, defaultMargin);
+        setMargin(txtPassword, defaultMargin);
+        setMargin(btnSignIn, defaultMargin);
+        setMargin(lblMessage, new Insets(0, 0, 5, 0));
 
         btnSignIn.setOnMouseClicked(this::onSubmit);
 

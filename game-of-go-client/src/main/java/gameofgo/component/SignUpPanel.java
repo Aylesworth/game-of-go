@@ -3,12 +3,14 @@ package gameofgo.component;
 import gameofgo.common.Configs;
 import gameofgo.common.Message;
 import gameofgo.service.SocketService;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TextAlignment;
 
 public class SignUpPanel extends VBox {
 
@@ -25,31 +27,45 @@ public class SignUpPanel extends VBox {
     private Label lblSignIn;
 
     public SignUpPanel() {
-        double textFieldWidth = 200;
+        double fieldWidth = 200;
 
         lblTitle = new Label("SIGN UP");
+        lblTitle.setFont(Configs.primaryFont(20));
+
         lblUsername = new Label("Username");
+        lblUsername.setFont(Configs.primaryFont(14));
+        lblUsername.setMinWidth(fieldWidth);
+        lblUsername.setTextAlignment(TextAlignment.LEFT);
+
         lblPassword = new Label("Password");
+        lblPassword.setFont(Configs.primaryFont(14));
+        lblPassword.setMinWidth(fieldWidth);
+        lblPassword.setTextAlignment(TextAlignment.LEFT);
+
         lblConfirmPassword = new Label("Confirm password");
+        lblConfirmPassword.setFont(Configs.primaryFont(14));
+        lblConfirmPassword.setMinWidth(fieldWidth);
+        lblConfirmPassword.setTextAlignment(TextAlignment.LEFT);
 
         txtUsername = new TextField();
         txtUsername.setPromptText("Username");
-        txtUsername.setMaxWidth(textFieldWidth);
+        txtUsername.setMaxWidth(fieldWidth);
 
         txtPassword = new PasswordField();
         txtPassword.setPromptText("Password");
-        txtPassword.setMaxWidth(textFieldWidth);
+        txtPassword.setMaxWidth(fieldWidth);
 
         txtConfirmPassword = new PasswordField();
         txtConfirmPassword.setPromptText("Confirm password");
-        txtConfirmPassword.setMaxWidth(textFieldWidth);
+        txtConfirmPassword.setMaxWidth(fieldWidth);
 
         lblMessage = new Label();
         lblMessage.setTextFill(Color.RED);
+        lblMessage.setWrapText(true);
 
         btnSignUp = new Button("Sign up");
 
-        lblSignIn = new Label("Sign in");
+        lblSignIn = new Label("Already have account? Sign in");
         lblSignIn.setTextFill(Color.BLUE);
         lblSignIn.setOnMouseEntered(event -> lblSignIn.setUnderline(true));
         lblSignIn.setOnMouseExited(event -> lblSignIn.setUnderline(false));
@@ -69,6 +85,14 @@ public class SignUpPanel extends VBox {
                 btnSignUp,
                 lblSignIn
         );
+
+        Insets defaultMargin = new Insets(0, 0, 10, 0);
+        setMargin(lblTitle, defaultMargin);
+        setMargin(txtUsername, defaultMargin);
+        setMargin(txtPassword, defaultMargin);
+        setMargin(txtConfirmPassword, defaultMargin);
+        setMargin(btnSignUp, defaultMargin);
+        setMargin(lblMessage, new Insets(0, 0, 5, 0));
 
         btnSignUp.setOnMouseClicked(this::onSubmit);
     }
@@ -107,6 +131,11 @@ public class SignUpPanel extends VBox {
         if (txtUsername.getText().isEmpty()) {
             txtUsername.setBackground(Background.fill(Configs.ERROR_COLOR));
             throw new Exception("Username should not be empty");
+        }
+
+        if (!txtUsername.getText().matches("[A-Za-z0-9_]+")) {
+            txtUsername.setBackground(Background.fill(Configs.ERROR_COLOR));
+            throw new Exception("Username should just contain letters, numbers and underscores");
         }
 
         if (txtPassword.getText().isEmpty()) {
