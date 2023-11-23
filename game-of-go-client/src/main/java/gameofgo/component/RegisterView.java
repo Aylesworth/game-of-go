@@ -3,6 +3,7 @@ package gameofgo.component;
 import gameofgo.common.Configs;
 import gameofgo.common.Message;
 import gameofgo.service.SocketService;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -94,10 +95,11 @@ public class RegisterView extends VBox {
         setMargin(btnSignUp, defaultMargin);
         setMargin(lblMessage, new Insets(0, 0, 5, 0));
 
-        btnSignUp.setOnMouseClicked(this::onSubmit);
+        btnSignUp.setOnAction(this::onSubmit);
+        txtPassword.setOnAction(this::onSubmit);
     }
 
-    private void onSubmit(MouseEvent event) {
+    private void onSubmit(ActionEvent event) {
         try {
             validate();
         } catch (Exception e) {

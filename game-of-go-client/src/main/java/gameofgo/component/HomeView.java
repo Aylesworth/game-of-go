@@ -124,6 +124,7 @@ public class HomeView extends VBox {
         lblTitle.setFont(Configs.primaryFont(13));
 
         onlineListView = new ListView<>();
+        onlineListView.setMaxHeight(250);
         onlineListView.setOnMouseClicked(event -> {
             HBox selectedItem = onlineListView.getSelectionModel().getSelectedItem();
             if (selectedItem == null) {

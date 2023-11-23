@@ -3,15 +3,18 @@ package gameofgo.component;
 import gameofgo.common.Message;
 import gameofgo.service.SocketService;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
 public class GameView extends BorderPane {
-    private static final Color BACKGROUND = Color.rgb(245, 183, 91);
+    private static final Color BACKGROUND = Color.rgb(215, 186, 137);
     private static final Color LINE_COLOR = Color.BROWN;
     private static final double FULL_WIDTH = 720;
     private static final double PADDING = 40;
@@ -95,14 +98,33 @@ public class GameView extends BorderPane {
         socketService.on("MOVPAS", message -> {
             myTurn = true;
             btnPass.setDisable(false);
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setHeaderText("Opponent passed");
+            alert.getButtonTypes().setAll(ButtonType.OK);
+            alert.showAndWait();
         });
 
         socketService.on("RESULT", message -> {
-            System.out.printf("You've got %.1f points%n", Float.parseFloat(message.payload().split("\n")[0]));
             myTurn = false;
+
+            String[] scores = message.payload().split(" ");
+            double blackScore = Float.parseFloat(scores[0]);
+            double whiteScore = Float.parseFloat(scores[1]);
+
+            String result = MY_COLOR == 1 ? (blackScore > whiteScore ? "won" : "lost") : (whiteScore > blackScore ? "won" : "lost");
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setHeaderText("BLACK has %.0f points\nWHITE has %.1f points\nYou %s!".formatted(blackScore, whiteScore, result));
+            alert.getButtonTypes().setAll(ButtonType.OK);
+            alert.showAndWait();
+
+            MainWindow.getInstance().setCenter(new HomeView());
         });
 
         VBox container = new VBox(gameBoard, btnPass);
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(15);
 
         setLeft(container);
     }

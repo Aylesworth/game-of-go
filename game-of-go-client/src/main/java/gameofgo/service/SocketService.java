@@ -65,15 +65,16 @@ public class SocketService {
         int blockTypeLength = 4;
         int headerLength = messageType.length() + blockTypeLength + 2;
         while (headerLength + payload.length() > BUFFER_SIZE - 1) {
-            send(messageType + " MID \n" + payload.substring(0, BUFFER_SIZE - 1 - headerLength));
+            send(messageType + " MID " + (BUFFER_SIZE - 1 - headerLength) + "\n" + payload.substring(0, BUFFER_SIZE - 1 - headerLength));
             payload = payload.substring(BUFFER_SIZE - 1 - headerLength);
         }
-        send(messageType + " LAST\n" + payload);
+        send(messageType + " LAST " + payload.length() + "\n" + payload);
     }
 
     public Message receive() {
         try {
             String messageType, blockType;
+            int payloadLength;
             StringBuilder payloadBuilder = new StringBuilder();
             byte[] bytes = new byte[BUFFER_SIZE];
 
@@ -85,6 +86,7 @@ public class SocketService {
                 String[] header = contents[0].split(" ");
                 messageType = header[0];
                 blockType = header[1];
+                payloadLength = Integer.parseInt(header[2]);
                 payloadBuilder.append(contents[1]);
             } while (!blockType.equals("LAST"));
 

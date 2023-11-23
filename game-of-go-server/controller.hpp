@@ -81,7 +81,7 @@ int handleSend(int clientSocket, const char *messageType, const char *payload) {
         memset(buff, 0, BUFF_SIZE);
         char *payloadSubstring;
         strncpy(payloadSubstring, payload, BUFF_SIZE - 1 - headerSize);
-        sprintf(buff, "%s %s\n%s", messageType, "MID ", payloadSubstring);
+        sprintf(buff, "%s %s %d\n%s", messageType, "MID ", BUFF_SIZE - 1 - headerSize, payloadSubstring);
 
         bytesSent = send(clientSocket, buff, strlen(buff), 0);
         if (bytesSent < 0) {
@@ -92,7 +92,7 @@ int handleSend(int clientSocket, const char *messageType, const char *payload) {
     }
 
     memset(buff, 0, BUFF_SIZE);
-    sprintf(buff, "%s %s\n%s", messageType, "LAST", payload);
+    sprintf(buff, "%s %s %ld\n%s", messageType, "LAST", strlen(payload), payload);
     bytesSent = send(clientSocket, buff, strlen(buff), 0);
     printf("Sent to %d:\n%s\n", clientSocket, buff);
 
@@ -119,12 +119,12 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
         int headerEndIndex = strcspn(buff, "\n");
         buff[headerEndIndex] = '\0';
 
-        int splitIndex = strcspn(buff, " ");
-        buff[splitIndex] = '\0';
+        char *token = strtok(buff, " ");
+        strncpy(messageType, token, 6);
 
-        strcpy(messageType, buff);
+        blockType = strtok(NULL, " ");
+
 //        printf("messageType = %s\n", messageType);
-        blockType = buff + splitIndex + 1;
 //        printf("blockType = %s\n", blockType);
         if (buff[headerEndIndex + 1] != '\0')
             strcat(payload, buff + headerEndIndex + 1);
@@ -251,11 +251,8 @@ void *handleRequest(void *arg) {
             if (game->pass() == 2) {
                 pair<float, float> scores = game->calculateScore();
                 memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%.1f\n", color == 1 ? scores.first : scores.second);
+                sprintf(buff, "%.1f %.1f\n", scores.first, scores.second);
                 handleSend(clientSocket, "RESULT", buff);
-
-                memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%.1f\n", color == 1 ? scores.second : scores.first);
                 handleSend(opponentClient->socket, "RESULT", buff);
 
                 thisClient->status = 0;
