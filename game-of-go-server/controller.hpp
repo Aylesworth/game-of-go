@@ -149,7 +149,7 @@ void *handleRequest(void *arg) {
 //        printf("messageType = %s\n", messageType);
 //        printf("payload = %s\n", payload);
 
-        if (strcmp(messageType, "SIGNUP") == 0) {
+        if (strcmp(messageType, "REGIST") == 0) {
             int res = handleCreateAccount(payload);
             switch (res) {
                 case 0:
@@ -159,7 +159,7 @@ void *handleRequest(void *arg) {
                     handleSend(clientSocket, "ERROR", "Username already used");
                     break;
             }
-        } else if (strcmp(messageType, "SIGNIN") == 0) {
+        } else if (strcmp(messageType, "LOGIN") == 0) {
             Account *account = handleSignIn(payload);
             if (account == NULL) {
                 handleSend(clientSocket, "ERROR", "Wrong username or password");
@@ -206,6 +206,7 @@ void *handleRequest(void *arg) {
 
                 thisClient->status = 1;
                 opponentClient->status = 1;
+                notifyOnlineStatusChange();
 
                 GoGame *game = new GoGame(13);
                 games[generateKey(clientSocket, opponentClient->socket)] = game;
@@ -259,6 +260,7 @@ void *handleRequest(void *arg) {
 
                 thisClient->status = 0;
                 opponentClient->status = 0;
+                notifyOnlineStatusChange();
             } else {
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%d\n", color);

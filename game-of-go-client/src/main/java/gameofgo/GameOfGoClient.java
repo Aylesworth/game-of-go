@@ -1,8 +1,7 @@
 package gameofgo;
 
-import gameofgo.component.GamePanel;
-import gameofgo.component.MainFrame;
-import gameofgo.component.SignInPanel;
+import gameofgo.component.MainWindow;
+import gameofgo.component.LoginView;
 import gameofgo.service.SocketService;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -11,9 +10,9 @@ import javafx.stage.Stage;
 public class GameOfGoClient extends Application {
     @Override
     public void start(Stage stage) throws Exception {
-        MainFrame mainFrame = MainFrame.getInstance();
-        mainFrame.setCenter(new SignInPanel());
-        stage.setScene(new Scene(mainFrame));
+        MainWindow mainWindow = MainWindow.getInstance();
+        mainWindow.setCenter(new LoginView());
+        stage.setScene(new Scene(mainWindow));
         stage.show();
     }
 

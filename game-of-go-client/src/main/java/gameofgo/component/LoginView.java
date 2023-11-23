@@ -11,10 +11,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.TextAlignment;
 
-public class SignInPanel extends VBox {
+public class LoginView extends VBox {
     private SocketService socketService = SocketService.getInstance();
     private Label lblTitle;
     private Label lblUsername;
@@ -25,10 +23,10 @@ public class SignInPanel extends VBox {
     private Button btnSignIn;
     private Label lblSignUp;
 
-    public SignInPanel() {
+    public LoginView() {
         double fieldWidth = 200;
 
-        lblTitle = new Label("SIGN IN");
+        lblTitle = new Label("LOGIN");
         lblTitle.setFont(Configs.primaryFont(20));
 
         lblUsername = new Label("Username");
@@ -51,13 +49,13 @@ public class SignInPanel extends VBox {
         lblMessage.setTextFill(Color.RED);
         lblMessage.setWrapText(true);
 
-        btnSignIn = new Button("Sign in");
+        btnSignIn = new Button("Login");
 
-        lblSignUp = new Label("No account? Sign up");
+        lblSignUp = new Label("No account? Register");
         lblSignUp.setTextFill(Color.BLUE);
         lblSignUp.setOnMouseEntered(event -> lblSignUp.setUnderline(true));
         lblSignUp.setOnMouseExited(event -> lblSignUp.setUnderline(false));
-        lblSignUp.setOnMouseClicked(event -> MainFrame.getInstance().setCenter(new SignUpPanel()));
+        lblSignUp.setOnMouseClicked(event -> MainWindow.getInstance().setCenter(new RegisterView()));
 
         setMaxWidth(300);
         setAlignment(Pos.CENTER);
@@ -83,7 +81,7 @@ public class SignInPanel extends VBox {
 
         socketService.on("OK", message -> {
             SessionStorage.setItem("username", txtUsername.getText());
-            MainFrame.getInstance().setCenter(new HomePanel());
+            MainWindow.getInstance().setCenter(new HomeView());
         });
         socketService.on("ERROR", message -> lblMessage.setText(message.payload()));
     }
@@ -97,7 +95,7 @@ public class SignInPanel extends VBox {
         }
 
         socketService.send(new Message(
-                "SIGNIN",
+                "LOGIN",
                 txtUsername.getText() + '\n' + txtPassword.getText() + '\n'
         ));
     }

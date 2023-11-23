@@ -12,7 +12,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 
-public class SignUpPanel extends VBox {
+public class RegisterView extends VBox {
 
     private SocketService socketService = SocketService.getInstance();
     private Label lblTitle;
@@ -26,10 +26,10 @@ public class SignUpPanel extends VBox {
     private Button btnSignUp;
     private Label lblSignIn;
 
-    public SignUpPanel() {
+    public RegisterView() {
         double fieldWidth = 200;
 
-        lblTitle = new Label("SIGN UP");
+        lblTitle = new Label("REGISTER");
         lblTitle.setFont(Configs.primaryFont(20));
 
         lblUsername = new Label("Username");
@@ -63,13 +63,13 @@ public class SignUpPanel extends VBox {
         lblMessage.setTextFill(Color.RED);
         lblMessage.setWrapText(true);
 
-        btnSignUp = new Button("Sign up");
+        btnSignUp = new Button("Register");
 
-        lblSignIn = new Label("Already have account? Sign in");
+        lblSignIn = new Label("Already have account? Login");
         lblSignIn.setTextFill(Color.BLUE);
         lblSignIn.setOnMouseEntered(event -> lblSignIn.setUnderline(true));
         lblSignIn.setOnMouseExited(event -> lblSignIn.setUnderline(false));
-        lblSignIn.setOnMouseClicked(event -> MainFrame.getInstance().setCenter(new SignInPanel()));
+        lblSignIn.setOnMouseClicked(event -> MainWindow.getInstance().setCenter(new LoginView()));
 
         setMaxWidth(300);
         setAlignment(Pos.CENTER);
@@ -111,13 +111,13 @@ public class SignUpPanel extends VBox {
             alert.setHeaderText(message.payload());
             alert.showAndWait();
 
-            MainFrame.getInstance().setCenter(new SignInPanel());
+            MainWindow.getInstance().setCenter(new LoginView());
         });
 
         socketService.on("ERROR", message -> lblMessage.setText(message.payload()));
 
         socketService.send(new Message(
-                "SIGNUP",
+                "REGIST",
                 txtUsername.getText() + '\n' + txtPassword.getText() + '\n'
         ));
     }

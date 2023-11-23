@@ -10,7 +10,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
-public class GamePanel extends BorderPane {
+public class GameView extends BorderPane {
     private static final Color BACKGROUND = Color.rgb(245, 183, 91);
     private static final Color LINE_COLOR = Color.BROWN;
     private static final double FULL_WIDTH = 720;
@@ -29,7 +29,7 @@ public class GamePanel extends BorderPane {
     private int lastColor;
     private String selectedPosition;
 
-    public GamePanel(int color) {
+    public GameView(int color) {
         MY_COLOR = color;
         myTurn = color == 1;
         setupGameBoard();
@@ -92,7 +92,10 @@ public class GamePanel extends BorderPane {
             btnPass.setDisable(!myTurn);
         });
 
-        socketService.on("MOVPAS", message -> myTurn = true);
+        socketService.on("MOVPAS", message -> {
+            myTurn = true;
+            btnPass.setDisable(false);
+        });
 
         socketService.on("RESULT", message -> {
             System.out.printf("You've got %.1f points%n", Float.parseFloat(message.payload().split("\n")[0]));
