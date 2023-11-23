@@ -7,7 +7,10 @@ import gameofgo.service.SocketService;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 
 import java.util.Optional;
 
@@ -30,6 +33,7 @@ public class HomeView extends VBox {
 
         socketService.on("LSTONL", message -> {
             onlineListView.getItems().clear();
+            btnInvite.setDisable(true);
 
             for (String line : message.payload().split("\n")) {
                 String[] params = line.split(" ", 2);
@@ -127,7 +131,7 @@ public class HomeView extends VBox {
                 return;
             }
 
-            if (((Label) selectedItem.getChildren().get(1)).getText().equals("Available")) {
+            if (((Label) ((HBox) selectedItem.getChildren().get(1)).getChildren().get(1)).getText().equals("Available")) {
                 btnInvite.setDisable(false);
             } else {
                 btnInvite.setDisable(true);
@@ -135,10 +139,9 @@ public class HomeView extends VBox {
         });
 
         btnInvite = new Button("Invite");
-        btnInvite.setDisable(true);
         btnInvite.setOnAction(event -> {
             HBox selectedItem = onlineListView.getSelectionModel().getSelectedItem();
-            String username = ((Label) selectedItem.getChildren().get(0)).getText();
+            String username = ((Label) ((HBox) selectedItem.getChildren().get(0)).getChildren().get(0)).getText();
             socketService.send(new Message("INVITE", username + "\n"));
         });
 
@@ -154,12 +157,25 @@ public class HomeView extends VBox {
     private HBox createUserBox(String username, String status) {
         Label lblUsername = new Label(username);
         Label lblStatus = new Label(status);
+        lblStatus.setMinWidth(30);
+
+        double circleSize = 5;
+        Circle circleStatus = new Circle(circleSize, circleSize, circleSize);
+        circleStatus.setFill(status.equals("Available") ? Color.LIGHTGREEN : Color.RED);
+
+        HBox usernameBox = new HBox(lblUsername);
+        usernameBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(usernameBox, Priority.ALWAYS);
+
+        HBox statusBox = new HBox(circleStatus, lblStatus);
+        statusBox.setAlignment(Pos.CENTER_RIGHT);
+        statusBox.setSpacing(5);
+        HBox.setHgrow(statusBox, Priority.ALWAYS);
 
         HBox userBox = new HBox();
-        userBox.setMinWidth(300);
+        userBox.setMaxWidth(280);
         userBox.setAlignment(Pos.CENTER);
-        userBox.setSpacing(30);
-        userBox.getChildren().addAll(lblUsername, lblStatus);
+        userBox.getChildren().addAll(usernameBox, statusBox);
 
         return userBox;
     }
