@@ -4,12 +4,15 @@ import gameofgo.common.Configs;
 import gameofgo.common.Message;
 import gameofgo.common.SessionStorage;
 import gameofgo.service.SocketService;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.TextAlignment;
 
 public class SignInPanel extends VBox {
     private SocketService socketService = SocketService.getInstance();
@@ -23,26 +26,33 @@ public class SignInPanel extends VBox {
     private Label lblSignUp;
 
     public SignInPanel() {
-        double textFieldWidth = 200;
+        double fieldWidth = 200;
 
         lblTitle = new Label("SIGN IN");
+        lblTitle.setFont(Configs.primaryFont(20));
+
         lblUsername = new Label("Username");
+        lblUsername.setFont(Configs.primaryFont(14));
+        lblUsername.setMinWidth(fieldWidth);
+
         lblPassword = new Label("Password");
+        lblPassword.setFont(Configs.primaryFont(14));
+        lblPassword.setMinWidth(fieldWidth);
 
         txtUsername = new TextField();
         txtUsername.setPromptText("Username");
-        txtUsername.setMaxWidth(textFieldWidth);
+        txtUsername.setMaxWidth(fieldWidth);
 
         txtPassword = new PasswordField();
         txtPassword.setPromptText("Password");
-        txtPassword.setMaxWidth(textFieldWidth);
+        txtPassword.setMaxWidth(fieldWidth);
 
         lblMessage = new Label();
         lblMessage.setTextFill(Color.RED);
 
         btnSignIn = new Button("Sign in");
 
-        lblSignUp = new Label("Sign up");
+        lblSignUp = new Label("No account? Sign up");
         lblSignUp.setTextFill(Color.BLUE);
         lblSignUp.setOnMouseEntered(event -> lblSignUp.setUnderline(true));
         lblSignUp.setOnMouseExited(event -> lblSignUp.setUnderline(false));
@@ -60,6 +70,10 @@ public class SignInPanel extends VBox {
                 btnSignIn,
                 lblSignUp
         );
+        setMargin(lblTitle, new Insets(0,0,10,0));
+        setMargin(txtUsername, new Insets(0,0,10,0));
+        setMargin(txtPassword, new Insets(0,0,10,0));
+        setMargin(btnSignIn, new Insets(0,0,10,0));
 
         btnSignIn.setOnMouseClicked(this::onSubmit);
 

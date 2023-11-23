@@ -66,6 +66,7 @@ public class GamePanel extends BorderPane {
         });
 
         Button btnPass = new Button("Pass");
+        btnPass.setDisable(!myTurn);
         btnPass.setOnMouseClicked(event -> {
             socketService.send(new Message("MOVPAS", "" + MY_COLOR + '\n'));
             myTurn = false;
@@ -88,7 +89,7 @@ public class GamePanel extends BorderPane {
                 }
             }
             myTurn = !myTurn;
-            if (myTurn) btnPass.setDisable(false);
+            btnPass.setDisable(!myTurn);
         });
 
         socketService.on("MOVPAS", message -> myTurn = true);

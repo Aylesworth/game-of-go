@@ -67,8 +67,8 @@ void handleClientDisconnect(int clientSocket) {
 int generateKey(int socket1, int socket2) {
     int h1 = hash < int > {}(socket1);
     int h2 = hash < int > {}(socket2);
-    int hash = (h1 + h2) ^ (h1 - h2) ^ (h2 - h1) ^ (h1 * h2) ^ (h1 / h2) ^ (h2 / h1) ^ (h1 % h2) ^ (h2 % h1);
-    return hash;
+    int key = (h1 + h2) ^ ((h1 - h2) & (h2 - h1)) ^ (h1 * h2) ^ (h1 / h2) ^ (h2 / h1) ^ (h1 % h2) ^ (h2 % h1);
+    return key;
 }
 
 int handleSend(int clientSocket, const char *messageType, const char *payload) {
@@ -204,6 +204,9 @@ void *handleRequest(void *arg) {
             if (strcmp(reply, "ACCEPT") == 0) {
                 printf("Establish game between %s and %s\n", thisClient->account->username.c_str(), opponent);
 
+                thisClient->status = 1;
+                opponentClient->status = 1;
+
                 GoGame *game = new GoGame(13);
                 games[generateKey(clientSocket, opponentClient->socket)] = game;
 
@@ -253,6 +256,9 @@ void *handleRequest(void *arg) {
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%.1f\n", color == 1 ? scores.second : scores.first);
                 handleSend(opponentClient->socket, "RESULT", buff);
+
+                thisClient->status = 0;
+                opponentClient->status = 0;
             } else {
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%d\n", color);
