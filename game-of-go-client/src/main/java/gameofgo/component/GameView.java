@@ -2,13 +2,13 @@ package gameofgo.component;
 
 import gameofgo.common.Message;
 import gameofgo.service.SocketService;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -26,12 +26,13 @@ public class GameView extends BorderPane {
     private final int MY_COLOR;
     private boolean myTurn;
     private final SocketService socketService = SocketService.getInstance();
-
-    private Canvas gameBoard;
-    private GraphicsContext gc;
     private String lastPosition;
     private int lastColor;
     private String selectedPosition;
+
+    private Canvas gameBoard;
+    private GraphicsContext gc;
+    private TableView<Move> tblLog;
 
     public GameView(int boardSize, int color) {
         this.BOARD_SIZE = boardSize;
@@ -41,6 +42,7 @@ public class GameView extends BorderPane {
         this.MY_COLOR = color;
         this.myTurn = color == 1;
         setupGameBoard();
+        setUpInformationPane();
     }
 
     private void setupGameBoard() {
@@ -79,6 +81,8 @@ public class GameView extends BorderPane {
             socketService.send(new Message("MOVE", "" + MY_COLOR + '\n' + "PA" + '\n'));
             myTurn = false;
             btnPass.setDisable(true);
+
+            tblLog.getItems().add(new Move(MY_COLOR, "PA"));
         });
 
         socketService.on("MOVERR", message -> {
@@ -87,10 +91,12 @@ public class GameView extends BorderPane {
         socketService.on("MOVE", message -> {
             String[] params = message.payload().split("\n");
             int color = Integer.parseInt(params[0]);
-            String label = params[1];
+            String coords = params[1];
 
-            if (!label.equals("PA")) {
-                play(label, color);
+            tblLog.getItems().add(new Move(color, coords));
+
+            if (!coords.equals("PA")) {
+                play(coords, color);
 
                 if (params.length > 2) {
                     String[] captured = params[2].split(" ");
@@ -134,6 +140,33 @@ public class GameView extends BorderPane {
         container.setSpacing(15);
 
         setLeft(container);
+    }
+
+    private void setUpInformationPane() {
+        TableColumn<Move, String> playerCol = new TableColumn<>("Player");
+        playerCol.setCellValueFactory(cellData ->
+                new SimpleStringProperty(cellData.getValue().getColor() == 1 ? "BLACK" : "WHITE"));
+
+        TableColumn<Move, String> coordsCol = new TableColumn<>("Move");
+        coordsCol.setCellValueFactory(cellData -> {
+            Move move = cellData.getValue();
+            String action = move.getCoords().equals("PA") ? "passes" : "plays " + move.getCoords();
+            return new SimpleStringProperty(action);
+        });
+
+        tblLog = new TableView<>();
+        tblLog.setMaxWidth(300);
+        tblLog.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        tblLog.getColumns().setAll(playerCol, coordsCol);
+
+        VBox pane = new VBox();
+        pane.setAlignment(Pos.CENTER);
+        pane.setPadding(new Insets(0, 10, 0, 10));
+        pane.setSpacing(20);
+        pane.setMinWidth(500);
+        pane.getChildren().addAll(tblLog);
+
+        setRight(pane);
     }
 
     private void play(String coords, int color) {
@@ -193,5 +226,23 @@ public class GameView extends BorderPane {
         if (colChar >= 'I') colChar++;
 
         return "" + colChar + (row + 1);
+    }
+
+    private class Move {
+        private int color;
+        private String coords;
+
+        public Move(int color, String coords) {
+            this.color = color;
+            this.coords = coords;
+        }
+
+        public int getColor() {
+            return color;
+        }
+
+        public String getCoords() {
+            return coords;
+        }
     }
 }

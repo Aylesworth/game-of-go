@@ -52,7 +52,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if (listen(serverSocket, 5) == -1) {
+    if (listen(serverSocket, 100) == -1) {
         perror("Error listening on socket");
         exit(EXIT_FAILURE);
     }
@@ -61,7 +61,7 @@ int main() {
 
     while (1) {
         clientSocket = accept(serverSocket, (struct sockaddr *) &client, &sinSize);
-        printf("Connection from %s.\n", inet_ntoa(client.sin_addr));
+        printf("Connection from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
         pthread_t clientThread;
         pthread_create(&clientThread, NULL, handleClient, (void *) &clientSocket);
