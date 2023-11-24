@@ -17,11 +17,12 @@ public class GameView extends BorderPane {
     private static final Color BACKGROUND = Color.rgb(215, 186, 137);
     private static final Color LINE_COLOR = Color.BROWN;
     private static final double FULL_WIDTH = 720;
-    private static final double PADDING = 40;
+    private static final double MARGIN = 40;
 
-    private final int BOARD_SIZE = 13;
-    private final double CELL_WIDTH = (FULL_WIDTH - 2 * PADDING) / (BOARD_SIZE - 1);
-    private final double STONE_RADIUS = CELL_WIDTH * 0.45;
+    private final int BOARD_SIZE;
+    private final double CELL_WIDTH;
+    private final double LINE_WIDTH;
+    private final double STONE_RADIUS;
     private final int MY_COLOR;
     private boolean myTurn;
     private final SocketService socketService = SocketService.getInstance();
@@ -32,9 +33,13 @@ public class GameView extends BorderPane {
     private int lastColor;
     private String selectedPosition;
 
-    public GameView(int color) {
-        MY_COLOR = color;
-        myTurn = color == 1;
+    public GameView(int boardSize, int color) {
+        this.BOARD_SIZE = boardSize;
+        this.CELL_WIDTH = (FULL_WIDTH - 2 * MARGIN) / (BOARD_SIZE - 1);
+        this.LINE_WIDTH = 0.05 * CELL_WIDTH;
+        this.STONE_RADIUS = 0.45 * CELL_WIDTH;
+        this.MY_COLOR = color;
+        this.myTurn = color == 1;
         setupGameBoard();
     }
 
@@ -46,11 +51,11 @@ public class GameView extends BorderPane {
         gc.fillRect(0, 0, FULL_WIDTH, FULL_WIDTH);
 
         gc.setStroke(LINE_COLOR);
-        gc.setLineWidth(3);
+        gc.setLineWidth(LINE_WIDTH);
 
         for (int i = 0; i < BOARD_SIZE; i++) {
-            gc.strokeLine(PADDING + i * CELL_WIDTH, PADDING, PADDING + i * CELL_WIDTH, FULL_WIDTH - PADDING);
-            gc.strokeLine(PADDING, PADDING + i * CELL_WIDTH, FULL_WIDTH - PADDING, PADDING + i * CELL_WIDTH);
+            gc.strokeLine(MARGIN + i * CELL_WIDTH, MARGIN, MARGIN + i * CELL_WIDTH, FULL_WIDTH - MARGIN);
+            gc.strokeLine(MARGIN, MARGIN + i * CELL_WIDTH, FULL_WIDTH - MARGIN, MARGIN + i * CELL_WIDTH);
         }
 
         gameBoard.setOnMouseClicked(event -> {
@@ -60,10 +65,10 @@ public class GameView extends BorderPane {
             double x = event.getX();
             double y = event.getY();
 
-            if (x < PADDING || x > FULL_WIDTH - PADDING || y < PADDING || y > FULL_WIDTH - PADDING)
+            if (x < MARGIN || x > FULL_WIDTH - MARGIN || y < MARGIN || y > FULL_WIDTH - MARGIN)
                 return;
 
-            selectedPosition = coordinatesToLabel(new Point2D(x, y));
+            selectedPosition = coordinatesToString(new Point2D(x, y));
 
             socketService.send(new Message("MOVE", "" + MY_COLOR + '\n' + selectedPosition + '\n'));
         });
@@ -131,16 +136,16 @@ public class GameView extends BorderPane {
         setLeft(container);
     }
 
-    private void play(String positionLabel, int color) {
-        putStone(positionLabel, color, true);
+    private void play(String coords, int color) {
+        putStone(coords, color, true);
         if (lastPosition != null)
             putStone(lastPosition, lastColor, false);
-        lastPosition = positionLabel;
+        lastPosition = coords;
         lastColor = color;
     }
 
-    private void putStone(String positionLabel, int color, boolean withMarker) {
-        Point2D coordinates = labelToCoordinates(positionLabel);
+    private void putStone(String coords, int color, boolean withMarker) {
+        Point2D coordinates = stringToCoordinates(coords);
 
         gc.setFill(color == 1 ? Color.BLACK : Color.WHITE);
         gc.fillOval(coordinates.getX() - STONE_RADIUS, coordinates.getY() - STONE_RADIUS, 2 * STONE_RADIUS, 2 * STONE_RADIUS);
@@ -152,8 +157,8 @@ public class GameView extends BorderPane {
         }
     }
 
-    private void removeStone(String positionLabel) {
-        Point2D coordinates = labelToCoordinates(positionLabel);
+    private void removeStone(String coords) {
+        Point2D coordinates = stringToCoordinates(coords);
         double x = coordinates.getX();
         double y = coordinates.getY();
 
@@ -161,32 +166,32 @@ public class GameView extends BorderPane {
         gc.fillRect(x - STONE_RADIUS, y - STONE_RADIUS, 2 * STONE_RADIUS, 2 * STONE_RADIUS);
 
         gc.setStroke(LINE_COLOR);
-        gc.strokeLine(x - STONE_RADIUS, y, x + STONE_RADIUS, y);
-        gc.strokeLine(x, y - STONE_RADIUS, x, y + STONE_RADIUS);
+        gc.setLineWidth(LINE_WIDTH);
+        if (x > MARGIN) gc.strokeLine(x - STONE_RADIUS, y, x, y);
+        if (x < FULL_WIDTH - MARGIN) gc.strokeLine(x, y, x + STONE_RADIUS, y);
+        if (y > MARGIN) gc.strokeLine(x, y - STONE_RADIUS, x, y);
+        if (y < FULL_WIDTH - MARGIN) gc.strokeLine(x, y, x, y + STONE_RADIUS);
     }
 
-    private Point2D labelToCoordinates(String label) {
-        int colChar = label.charAt(0);
+    private Point2D stringToCoordinates(String coords) {
+        int colChar = coords.charAt(0);
         if (colChar >= 'J') colChar--;
 
         int col = colChar - 'A';
-        int row = Integer.parseInt(label.substring(1)) - 1;
+        int row = Integer.parseInt(coords.substring(1)) - 1;
 
-        double x = PADDING + col * CELL_WIDTH;
-        double y = FULL_WIDTH - (PADDING + row * CELL_WIDTH);
+        double x = MARGIN + col * CELL_WIDTH;
+        double y = FULL_WIDTH - (MARGIN + row * CELL_WIDTH);
         return new Point2D(x, y);
     }
 
-    private String coordinatesToLabel(Point2D coordinates) {
-        int col = (int) Math.round((coordinates.getX() - PADDING) / CELL_WIDTH);
-        int row = BOARD_SIZE - 1 - (int) Math.round((coordinates.getY() - PADDING) / CELL_WIDTH);
+    private String coordinatesToString(Point2D coordinates) {
+        int col = (int) Math.round((coordinates.getX() - MARGIN) / CELL_WIDTH);
+        int row = BOARD_SIZE - 1 - (int) Math.round((coordinates.getY() - MARGIN) / CELL_WIDTH);
 
         char colChar = (char) (col + 'A');
         if (colChar >= 'I') colChar++;
 
         return "" + colChar + (row + 1);
-    }
-
-    private record Position(int x, int y) {
     }
 }

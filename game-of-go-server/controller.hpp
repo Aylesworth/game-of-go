@@ -64,7 +64,7 @@ void handleClientDisconnect(int clientSocket) {
     }
 }
 
-int generateKey(int socket1, int socket2) {
+int getKey(int socket1, int socket2) {
     int h1 = hash < int > {}(socket1);
     int h2 = hash < int > {}(socket2);
     int key = (h1 + h2) ^ ((h1 - h2) & (h2 - h1)) ^ (h1 * h2) ^ (h1 / h2) ^ (h2 / h1) ^ (h1 % h2) ^ (h2 % h1);
@@ -148,9 +148,6 @@ void *handleRequest(void *arg) {
     char buff[BUFF_SIZE];
 
     while (handleReceive(clientSocket, messageType, payload)) {
-//        printf("messageType = %s\n", messageType);
-//        printf("payload = %s\n", payload);
-
         if (strcmp(messageType, "REGIST") == 0) {
             int res = handleCreateAccount(payload);
             switch (res) {
@@ -191,16 +188,20 @@ void *handleRequest(void *arg) {
             handleSend(clientSocket, "LSTONL", payload);
         } else if (strcmp(messageType, "INVITE") == 0) {
             char *opponent = strtok(payload, "\n");
+            int boardSize = atoi(strtok(NULL, "\n"));
             opponentClient = findClientByUsername(opponent);
 
-            handleSend(opponentClient->socket, "INVITE", (thisClient->account->username + "\n").c_str());
+            memset(buff, 0, BUFF_SIZE);
+            sprintf(buff, "%s\n%d\n", thisClient->account->username.c_str(), boardSize);
+            handleSend(opponentClient->socket, "INVITE", buff);
         } else if (strcmp(messageType, "INVRES") == 0) {
             char *opponent = strtok(payload, "\n");
+            int boardSize = atoi(strtok(NULL, "\n"));
             char *reply = strtok(NULL, "\n");
             opponentClient = findClientByUsername(opponent);
 
             memset(buff, 0, BUFF_SIZE);
-            sprintf(buff, "%s\n%s\n", thisClient->account->username.c_str(), reply);
+            sprintf(buff, "%s\n%d\n%s\n", thisClient->account->username.c_str(), boardSize, reply);
             handleSend(opponentClient->socket, "INVRES", buff);
 
             if (strcmp(reply, "ACCEPT") == 0) {
@@ -210,24 +211,24 @@ void *handleRequest(void *arg) {
                 opponentClient->status = 1;
                 notifyOnlineStatusChange();
 
-                GoGame *game = new GoGame(13);
-                games[generateKey(clientSocket, opponentClient->socket)] = game;
+                GoGame *game = new GoGame(boardSize);
+                games[getKey(clientSocket, opponentClient->socket)] = game;
 
                 srand(time(NULL));
                 int randomColor = rand() % 2 + 1;
 
                 memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%d\n", randomColor);
+                sprintf(buff, "%d\n%d\n", boardSize, randomColor);
                 handleSend(clientSocket, "SETUP", buff);
 
                 memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%d\n", 3 - randomColor);
+                sprintf(buff, "%d\n%d\n", boardSize, 3 - randomColor);
                 handleSend(opponentClient->socket, "SETUP", buff);
             } else {
                 opponentClient = NULL;
             }
         } else if (strcmp(messageType, "MOVE") == 0) {
-            GoGame *game = games[generateKey(clientSocket, opponentClient->socket)];
+            GoGame *game = games[getKey(clientSocket, opponentClient->socket)];
 
             int color = atoi(strtok(payload, "\n"));
             char *coords = strtok(NULL, "\n");

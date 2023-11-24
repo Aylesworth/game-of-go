@@ -49,19 +49,20 @@ public class HomeView extends VBox {
                 message -> socketService.send(new Message("LSTONL", "")));
 
         socketService.on("INVITE", message -> {
-            String sender = message.payload().split("\n")[0];
+            String[] params = message.payload().split("\n");
+            String sender = params[0];
+            int boardSize = Integer.parseInt(params[1]);
+
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setHeaderText("You've got a challenge from %s. Do you want to accept?".formatted(sender));
             alert.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
             Optional<ButtonType> choice = alert.showAndWait();
 
-            String payload = sender + '\n';
-            if (choice.isPresent() && choice.get().equals(ButtonType.YES)) {
-                payload += "ACCEPT\n";
-            } else {
-                payload += "DECLINE\n";
-            }
-
+            String payload = "%s\n%d\n%s\n".formatted(
+                    sender,
+                    boardSize,
+                    choice.isPresent() && choice.get().equals(ButtonType.YES) ? "ACCEPT" : "DECLINE"
+            );
             socketService.send(new Message("INVRES", payload));
         });
 
@@ -78,8 +79,10 @@ public class HomeView extends VBox {
         });
 
         socketService.on("SETUP", message -> {
-            int color = Integer.parseInt(message.payload().substring(0, 1));
-            MainWindow.getInstance().setCenter(new GameView(color));
+            String[] params = message.payload().split("\n");
+            int boardSize = Integer.parseInt(params[0]);
+            int color = Integer.parseInt(params[1]);
+            MainWindow.getInstance().setCenter(new GameView(boardSize, color));
         });
 
         socketService.send(new Message("LSTONL", ""));
@@ -144,7 +147,7 @@ public class HomeView extends VBox {
         btnInvite.setOnAction(event -> {
             HBox selectedItem = onlineListView.getSelectionModel().getSelectedItem();
             String username = ((Label) ((HBox) selectedItem.getChildren().get(0)).getChildren().get(0)).getText();
-            socketService.send(new Message("INVITE", username + "\n"));
+            socketService.send(new Message("INVITE", username + '\n' + selectedBoardSize + '\n'));
         });
 
         VBox onlineBox = new VBox();
