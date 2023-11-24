@@ -227,43 +227,45 @@ void *handleRequest(void *arg) {
                 opponentClient = NULL;
             }
         } else if (strcmp(messageType, "MOVE") == 0) {
+            GoGame *game = games[generateKey(clientSocket, opponentClient->socket)];
+
             int color = atoi(strtok(payload, "\n"));
             char *coords = strtok(NULL, "\n");
-            GoGame *game = games[generateKey(clientSocket, opponentClient->socket)];
-            if (game->play(coords, color)) {
-                memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%d\n%s\n", color, coords);
 
-                vector <string> captured = game->getCaptured();
-                if (captured.size() > 0) {
-                    for (string cap: captured) {
-                        strcat(buff, (cap + " ").c_str());
+            if (strcmp(coords, "PA") != 0) {
+                if (game->play(coords, color)) {
+                    memset(buff, 0, BUFF_SIZE);
+                    sprintf(buff, "%d\n%s\n", color, coords);
+
+                    vector <string> captured = game->getCaptured();
+                    if (captured.size() > 0) {
+                        for (string cap: captured) {
+                            strcat(buff, (cap + " ").c_str());
+                        }
+                        strcat(buff, "\n");
                     }
-                    strcat(buff, "\n");
+
+                    handleSend(clientSocket, "MOVE", buff);
+                    handleSend(opponentClient->socket, "MOVE", buff);
+                } else {
+                    handleSend(clientSocket, "MOVERR", "");
                 }
-
-                handleSend(clientSocket, "MOVE", buff);
-                handleSend(opponentClient->socket, "MOVE", buff);
             } else {
-                handleSend(clientSocket, "MOVERR", "");
-            }
-        } else if (strcmp(messageType, "MOVPAS") == 0) {
-            int color = atoi(strtok(payload, "\n"));
-            GoGame *game = games[generateKey(clientSocket, opponentClient->socket)];
-            if (game->pass() == 2) {
-                pair<float, float> scores = game->calculateScore();
-                memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%.1f %.1f\n", scores.first, scores.second);
-                handleSend(clientSocket, "RESULT", buff);
-                handleSend(opponentClient->socket, "RESULT", buff);
+                if (game->pass() == 2) {
+                    pair<float, float> scores = game->calculateScore();
+                    memset(buff, 0, BUFF_SIZE);
+                    sprintf(buff, "%.1f %.1f\n", scores.first, scores.second);
+                    handleSend(clientSocket, "RESULT", buff);
+                    handleSend(opponentClient->socket, "RESULT", buff);
 
-                thisClient->status = 0;
-                opponentClient->status = 0;
-                notifyOnlineStatusChange();
-            } else {
-                memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%d\n", color);
-                handleSend(opponentClient->socket, "MOVPAS", buff);
+                    thisClient->status = 0;
+                    opponentClient->status = 0;
+                    notifyOnlineStatusChange();
+                } else {
+                    memset(buff, 0, BUFF_SIZE);
+                    sprintf(buff, "%d\n%s\n", color, coords);
+                    handleSend(opponentClient->socket, "MOVE", buff);
+                }
             }
         }
     }

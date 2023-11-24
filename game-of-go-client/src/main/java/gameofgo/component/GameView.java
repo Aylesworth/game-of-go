@@ -71,7 +71,7 @@ public class GameView extends BorderPane {
         Button btnPass = new Button("Pass");
         btnPass.setDisable(!myTurn);
         btnPass.setOnMouseClicked(event -> {
-            socketService.send(new Message("MOVPAS", "" + MY_COLOR + '\n'));
+            socketService.send(new Message("MOVE", "" + MY_COLOR + '\n' + "PA" + '\n'));
             myTurn = false;
             btnPass.setDisable(true);
         });
@@ -83,26 +83,28 @@ public class GameView extends BorderPane {
             String[] params = message.payload().split("\n");
             int color = Integer.parseInt(params[0]);
             String label = params[1];
-            play(label, color);
 
-            if (params.length > 2) {
-                String[] captured = params[2].split(" ");
-                for (String cap : captured) {
-                    removeStone(cap);
+            if (!label.equals("PA")) {
+                play(label, color);
+
+                if (params.length > 2) {
+                    String[] captured = params[2].split(" ");
+                    for (String cap : captured) {
+                        removeStone(cap);
+                    }
                 }
+
+                myTurn = !myTurn;
+                btnPass.setDisable(!myTurn);
+            } else {
+                myTurn = true;
+                btnPass.setDisable(false);
+
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setHeaderText("Opponent passed");
+                alert.getButtonTypes().setAll(ButtonType.OK);
+                alert.showAndWait();
             }
-            myTurn = !myTurn;
-            btnPass.setDisable(!myTurn);
-        });
-
-        socketService.on("MOVPAS", message -> {
-            myTurn = true;
-            btnPass.setDisable(false);
-
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setHeaderText("Opponent passed");
-            alert.getButtonTypes().setAll(ButtonType.OK);
-            alert.showAndWait();
         });
 
         socketService.on("RESULT", message -> {
