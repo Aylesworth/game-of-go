@@ -20,6 +20,8 @@ using namespace std;
 #define PORT 8080
 
 void *handleClient(void *arg) {
+    pthread_detach(pthread_self());
+
     int clientSocket = *(int *) arg;
     pthread_t receiveThread;
     pthread_create(&receiveThread, NULL, handleRequest, (void *) &clientSocket);

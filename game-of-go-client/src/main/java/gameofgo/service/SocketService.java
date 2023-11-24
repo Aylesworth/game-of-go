@@ -30,6 +30,7 @@ public class SocketService {
     private BufferedReader br;
     private Map<String, MessageHandler> handlers;
     private Thread listeningThread;
+    private String remainingBytes = "";
 
     private SocketService() {
         try {
@@ -59,16 +60,20 @@ public class SocketService {
     public void send(Message message) {
         String messageType = message.messageType();
         String payload = message.payload();
-
-        System.out.println("Sent:\n" + payload);
+        String buff;
 
         int blockTypeLength = 4;
         int headerLength = messageType.length() + blockTypeLength + 2;
         while (headerLength + payload.length() > BUFFER_SIZE - 1) {
-            send(messageType + " MID " + (BUFFER_SIZE - 1 - headerLength) + "\n" + payload.substring(0, BUFFER_SIZE - 1 - headerLength));
+            buff = messageType + " MID " + (BUFFER_SIZE - 1 - headerLength) + "\n" + payload.substring(0, BUFFER_SIZE - 1 - headerLength);
+            send(buff);
             payload = payload.substring(BUFFER_SIZE - 1 - headerLength);
+            System.out.println("Sent:\n" + buff);
         }
-        send(messageType + " LAST " + payload.length() + "\n" + payload);
+
+        buff = messageType + " LAST " + payload.length() + "\n" + payload;
+        send(buff);
+        System.out.println("Sent:\n" + buff);
     }
 
     public Message receive() {
@@ -77,20 +82,33 @@ public class SocketService {
             int payloadLength;
             StringBuilder payloadBuilder = new StringBuilder();
             byte[] bytes = new byte[BUFFER_SIZE];
+            String buff;
 
             do {
                 int bytesRead = in.read(bytes);
-                String response = new String(bytes, 0, bytesRead, "UTF-8");
+                buff = new String(bytes, 0, bytesRead, "UTF-8");
+                System.out.println("Received:\n" + buff);
 
-                String[] contents = response.split("\n", 2);
+                buff = remainingBytes + buff;
+
+                String[] contents = buff.split("\n", 2);
                 String[] header = contents[0].split(" ");
+                String payload = contents[1];
+
                 messageType = header[0];
                 blockType = header[1];
                 payloadLength = Integer.parseInt(header[2]);
-                payloadBuilder.append(contents[1]);
+
+                if (payloadLength < payload.length()) {
+                    remainingBytes = payload.substring(payloadLength);
+                    payload = payload.substring(0, payloadLength);
+                } else {
+                    remainingBytes = "";
+                }
+
+                payloadBuilder.append(payload);
             } while (!blockType.equals("LAST"));
 
-            System.out.println("Received:\n" + payloadBuilder);
             return new Message(messageType, payloadBuilder.toString());
         } catch (Exception e) {
             throw new RuntimeException(e);

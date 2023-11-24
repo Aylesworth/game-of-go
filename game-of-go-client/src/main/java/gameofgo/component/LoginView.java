@@ -81,6 +81,7 @@ public class LoginView extends VBox {
         setMargin(lblMessage, new Insets(0, 0, 5, 0));
 
         btnSignIn.setOnAction(this::onSubmit);
+        txtUsername.setOnAction(this::onSubmit);
         txtPassword.setOnAction(this::onSubmit);
 
         socketService.on("OK", message -> {

@@ -139,6 +139,8 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
 }
 
 void *handleRequest(void *arg) {
+    pthread_detach(pthread_self());
+
     int clientSocket = *(int *) arg;
     ClientInfo *thisClient;
     ClientInfo *opponentClient;

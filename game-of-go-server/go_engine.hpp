@@ -204,7 +204,6 @@ public:
 
     int pass() {
         consecutivePass++;
-        printf("pass = %d\n", consecutivePass);
         return consecutivePass;
     }
 

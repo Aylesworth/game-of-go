@@ -96,7 +96,9 @@ public class RegisterView extends VBox {
         setMargin(lblMessage, new Insets(0, 0, 5, 0));
 
         btnSignUp.setOnAction(this::onSubmit);
+        txtUsername.setOnAction(this::onSubmit);
         txtPassword.setOnAction(this::onSubmit);
+        txtConfirmPassword.setOnAction(this::onSubmit);
     }
 
     private void onSubmit(ActionEvent event) {
