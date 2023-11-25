@@ -8,6 +8,8 @@
 #include "service.hpp"
 #include "go_engine.hpp"
 #include <pthread.h>
+#include <time.h>
+#include <unistd.h>
 #include <set>
 #include <map>
 
@@ -138,6 +140,24 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
     return 1;
 }
 
+void sendComputerMove(int clientSocket, GoGame *game, int color) {
+    char buff[BUFF_SIZE];
+    string move = game->generateMove(color);
+
+    memset(buff, 0, BUFF_SIZE);
+    sprintf(buff, "%d\n%s\n", color, move.c_str());
+
+    vector <string> captured = game->getCaptured();
+    if (captured.size() > 0) {
+        for (string cap: captured) {
+            strcat(buff, (cap + " ").c_str());
+        }
+        strcat(buff, "\n");
+    }
+
+    handleSend(clientSocket, "MOVE", buff);
+}
+
 void *handleRequest(void *arg) {
     pthread_detach(pthread_self());
 
@@ -189,6 +209,37 @@ void *handleRequest(void *arg) {
         } else if (strcmp(messageType, "INVITE") == 0) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
+
+            if (strcmp(opponent, "@CPU") == 0) {
+                opponentClient = NULL;
+
+                memset(buff, 0, BUFF_SIZE);
+                sprintf(buff, "%s\n%d\n%s\n", "@CPU", boardSize, "ACCEPT");
+                handleSend(clientSocket, "INVRES", buff);
+
+                printf("Establish game between %s and %s\n", thisClient->account->username.c_str(), "@CPU");
+
+                thisClient->status = 1;
+                notifyOnlineStatusChange();
+
+                GoGame *game = new GoGame(boardSize);
+                games[getKey(clientSocket, -1)] = game;
+
+                srand(time(NULL));
+                int randomColor = rand() % 2 + 1;
+
+                memset(buff, 0, BUFF_SIZE);
+                sprintf(buff, "%d\n%d\n", boardSize, randomColor);
+                handleSend(clientSocket, "SETUP", buff);
+
+                if (randomColor != 1) {
+                    usleep(100000);
+                    sendComputerMove(clientSocket, game, 3 - randomColor);
+                }
+
+                continue;
+            }
+
             opponentClient = findClientByUsername(opponent);
 
             memset(buff, 0, BUFF_SIZE);
@@ -228,7 +279,7 @@ void *handleRequest(void *arg) {
                 opponentClient = NULL;
             }
         } else if (strcmp(messageType, "MOVE") == 0) {
-            GoGame *game = games[getKey(clientSocket, opponentClient->socket)];
+            GoGame *game = games[getKey(clientSocket, opponentClient == NULL ? -1 : opponentClient->socket)];
 
             int color = atoi(strtok(payload, "\n"));
             char *coords = strtok(NULL, "\n");
@@ -247,11 +298,19 @@ void *handleRequest(void *arg) {
                     }
 
                     handleSend(clientSocket, "MOVE", buff);
-                    handleSend(opponentClient->socket, "MOVE", buff);
+                    if (opponentClient != NULL)
+                        handleSend(opponentClient->socket, "MOVE", buff);
+                    else {
+                        sendComputerMove(clientSocket, game, 3 - color);
+                    }
                 } else {
                     handleSend(clientSocket, "MOVERR", "");
                 }
             } else {
+                if (opponentClient == NULL) {
+                    sendComputerMove(clientSocket, game, 3 - color);
+                    continue;
+                }
                 if (game->pass() == 2) {
                     pair<float, float> scores = game->calculateScore();
                     memset(buff, 0, BUFF_SIZE);

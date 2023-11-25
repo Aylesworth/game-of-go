@@ -101,7 +101,7 @@ public class GameView extends BorderPane {
             btnSubmitMove.setDisable(false);
         });
 
-        btnSubmitMove.setDisable(!myTurn);
+        btnSubmitMove.setDisable(true);
         btnSubmitMove.setOnAction(event -> {
             socketService.send(new Message("MOVE", "" + MY_COLOR + '\n' + selectedPosition + '\n'));
         });
@@ -117,6 +117,7 @@ public class GameView extends BorderPane {
             btnPass.setDisable(true);
 
             tblLog.getItems().add(new Move(MY_COLOR, "PA"));
+            tblLog.scrollTo(tblLog.getItems().size() - 1);
         });
 
         VBox container = new VBox(gameBoard, btnSubmitMove, btnPass);
@@ -136,6 +137,7 @@ public class GameView extends BorderPane {
             String coords = params[1];
 
             tblLog.getItems().add(new Move(color, coords));
+            tblLog.scrollTo(tblLog.getItems().size() - 1);
 
             if (!coords.equals("PA")) {
                 play(coords, color);

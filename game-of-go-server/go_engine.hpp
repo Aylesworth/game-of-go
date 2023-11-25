@@ -6,6 +6,7 @@
 #define GAME_OF_GO_SERVER_GO_ENGINE_HPP
 
 #include <stdio.h>
+#include <time.h>
 #include <vector>
 #include <queue>
 #include <set>
@@ -110,6 +111,7 @@ private:
         int capturable = 0;
 
         for (int dir: directions) {
+            if (board[pos + dir] != 3 - color) continue;
             count(pos + dir, 3 - color);
             if (liberties.size() == 0) {
                 restoreBoard();
@@ -243,6 +245,24 @@ public:
             return 1;
         }
         return 0;
+    }
+
+    string generateMove(int color) {
+        srand(time(NULL));
+        int pos;
+        string coords;
+        do {
+            pos = rand() % (boardRange * boardRange);
+            int row = pos / boardRange;
+            int col = pos % boardRange;
+
+            char colSymbol = col - 1 + 'A';
+            if (colSymbol >= 'I') colSymbol++;
+
+            coords = string(1, colSymbol) + to_string(row);
+        } while (!play(coords, color));
+
+        return coords;
     }
 
     int pass() {

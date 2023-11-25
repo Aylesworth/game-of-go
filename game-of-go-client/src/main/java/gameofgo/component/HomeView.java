@@ -69,7 +69,7 @@ public class HomeView extends VBox {
         socketService.on("INVRES", message -> {
             String[] params = message.payload().split("\n");
             String opponent = params[0];
-            String reply = params[1];
+            String reply = params[2];
 
             if (reply.equals("ACCEPT")) {
                 System.out.println("Player %s accepted the challenge.".formatted(opponent));
@@ -123,6 +123,11 @@ public class HomeView extends VBox {
     }
 
     private VBox createOnlineBox() {
+        Button btnPlayWithCPU = new Button("Play with computer");
+        btnPlayWithCPU.setOnAction(event -> {
+            socketService.send(new Message("INVITE", "@CPU" + '\n' + selectedBoardSize + '\n'));
+        });
+
         Label lblTitle = new Label("Challenge another player:");
         lblTitle.setFont(Configs.primaryFont(13));
 
@@ -136,11 +141,8 @@ public class HomeView extends VBox {
                 return;
             }
 
-            if (((Label) ((HBox) selectedItem.getChildren().get(1)).getChildren().get(1)).getText().equals("Available")) {
-                btnInvite.setDisable(false);
-            } else {
-                btnInvite.setDisable(true);
-            }
+            boolean available = ((Label) ((HBox) selectedItem.getChildren().get(1)).getChildren().get(1)).getText().equals("Available");
+            btnInvite.setDisable(!available);
         });
 
         btnInvite = new Button("Invite");
@@ -154,7 +156,7 @@ public class HomeView extends VBox {
         onlineBox.setAlignment(Pos.CENTER);
         onlineBox.setMaxWidth(300);
         onlineBox.setSpacing(10);
-        onlineBox.getChildren().addAll(lblTitle, onlineListView, btnInvite);
+        onlineBox.getChildren().addAll(btnPlayWithCPU, lblTitle, onlineListView, btnInvite);
 
         return onlineBox;
     }
