@@ -206,9 +206,9 @@ public:
             int row = i / boardRange;
             int col = i % boardRange;
             if (row < 1 || row > boardSize || col < 1 || col > boardSize)
-                board[i] = 7;
+                board[i] = OFFBOARD;
             else
-                board[i] = 0;
+                board[i] = EMPTY;
         }
     }
 
@@ -241,9 +241,8 @@ public:
             lastMove = pos;
             lastCaptured = captured[0];
             return 1;
-        } else {
-            return 0;
         }
+        return 0;
     }
 
     int pass() {

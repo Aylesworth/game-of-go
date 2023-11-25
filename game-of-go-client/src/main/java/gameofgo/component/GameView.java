@@ -9,6 +9,7 @@ import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -60,6 +61,9 @@ public class GameView extends BorderPane {
             gc.strokeLine(MARGIN, MARGIN + i * CELL_WIDTH, FULL_WIDTH - MARGIN, MARGIN + i * CELL_WIDTH);
         }
 
+        Button btnSubmitMove = new Button("Submit move");
+        Button btnPass = new Button("Pass");
+
         gameBoard.setOnMouseClicked(event -> {
             if (!myTurn)
                 return;
@@ -70,22 +74,60 @@ public class GameView extends BorderPane {
             if (x < MARGIN || x > FULL_WIDTH - MARGIN || y < MARGIN || y > FULL_WIDTH - MARGIN)
                 return;
 
-            selectedPosition = coordinatesToString(new Point2D(x, y));
+            String position = coordinatesToString(x, y);
+            if (position.equals(selectedPosition)) {
+                removeStone(selectedPosition);
+                selectedPosition = null;
+                btnSubmitMove.setDisable(true);
+                return;
+            }
 
+            x = Math.round((x - MARGIN) / CELL_WIDTH) * CELL_WIDTH + MARGIN;
+            y = Math.round((y - MARGIN) / CELL_WIDTH) * CELL_WIDTH + MARGIN;
+
+            WritableImage writableImage = new WritableImage((int) gameBoard.getWidth(), (int) gameBoard.getHeight());
+            gameBoard.snapshot(null, writableImage);
+            if (!writableImage.getPixelReader().getColor((int) x, (int) y).equals(LINE_COLOR)) {
+                return;
+            }
+
+            if (selectedPosition != null)
+                removeStone(selectedPosition);
+
+            selectedPosition = position;
+
+            putStone(selectedPosition, MY_COLOR, true, true);
+
+            btnSubmitMove.setDisable(false);
+        });
+
+        btnSubmitMove.setDisable(!myTurn);
+        btnSubmitMove.setOnAction(event -> {
             socketService.send(new Message("MOVE", "" + MY_COLOR + '\n' + selectedPosition + '\n'));
         });
 
-        Button btnPass = new Button("Pass");
         btnPass.setDisable(!myTurn);
-        btnPass.setOnMouseClicked(event -> {
+        btnPass.setOnAction(event -> {
+            if (selectedPosition != null)
+                removeStone(selectedPosition);
+
             socketService.send(new Message("MOVE", "" + MY_COLOR + '\n' + "PA" + '\n'));
             myTurn = false;
+            btnSubmitMove.setDisable(true);
             btnPass.setDisable(true);
 
             tblLog.getItems().add(new Move(MY_COLOR, "PA"));
         });
 
+        VBox container = new VBox(gameBoard, btnSubmitMove, btnPass);
+        container.setAlignment(Pos.CENTER);
+        container.setSpacing(15);
+
+        setLeft(container);
+
         socketService.on("MOVERR", message -> {
+            removeStone(selectedPosition);
+            selectedPosition = null;
         });
 
         socketService.on("MOVE", message -> {
@@ -106,9 +148,11 @@ public class GameView extends BorderPane {
                 }
 
                 myTurn = !myTurn;
+                btnSubmitMove.setDisable(true);
                 btnPass.setDisable(!myTurn);
             } else {
                 myTurn = true;
+                btnSubmitMove.setDisable(false);
                 btnPass.setDisable(false);
 
                 Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -116,10 +160,14 @@ public class GameView extends BorderPane {
                 alert.getButtonTypes().setAll(ButtonType.OK);
                 alert.showAndWait();
             }
+
+            selectedPosition = null;
         });
 
         socketService.on("RESULT", message -> {
             myTurn = false;
+            btnSubmitMove.setDisable(true);
+            btnPass.setDisable(true);
 
             String[] scores = message.payload().split(" ");
             double blackScore = Float.parseFloat(scores[0]);
@@ -134,12 +182,6 @@ public class GameView extends BorderPane {
 
             MainWindow.getInstance().setCenter(new HomeView());
         });
-
-        VBox container = new VBox(gameBoard, btnPass);
-        container.setAlignment(Pos.CENTER);
-        container.setSpacing(15);
-
-        setLeft(container);
     }
 
     private void setUpInformationPane() {
@@ -170,21 +212,25 @@ public class GameView extends BorderPane {
     }
 
     private void play(String coords, int color) {
-        putStone(coords, color, true);
+        putStone(coords, color, true, false);
         if (lastPosition != null)
-            putStone(lastPosition, lastColor, false);
+            putStone(lastPosition, lastColor, false, false);
         lastPosition = coords;
         lastColor = color;
     }
 
-    private void putStone(String coords, int color, boolean withMarker) {
+    private void putStone(String coords, int color, boolean withMarker, boolean faded) {
         Point2D coordinates = stringToCoordinates(coords);
 
-        gc.setFill(color == 1 ? Color.BLACK : Color.WHITE);
+        double opacity = faded ? 0.5 : 1;
+        Color black = new Color(0, 0, 0, opacity);
+        Color white = new Color(1, 1, 1, opacity);
+
+        gc.setFill(color == 1 ? black : white);
         gc.fillOval(coordinates.getX() - STONE_RADIUS, coordinates.getY() - STONE_RADIUS, 2 * STONE_RADIUS, 2 * STONE_RADIUS);
 
         if (withMarker) {
-            gc.setStroke(color == 1 ? Color.WHITE : Color.BLACK);
+            gc.setStroke(color == 1 ? white : black);
             gc.setLineWidth(3);
             gc.strokeOval(coordinates.getX() - STONE_RADIUS / 2, coordinates.getY() - STONE_RADIUS / 2, STONE_RADIUS, STONE_RADIUS);
         }
@@ -218,9 +264,9 @@ public class GameView extends BorderPane {
         return new Point2D(x, y);
     }
 
-    private String coordinatesToString(Point2D coordinates) {
-        int col = (int) Math.round((coordinates.getX() - MARGIN) / CELL_WIDTH);
-        int row = BOARD_SIZE - 1 - (int) Math.round((coordinates.getY() - MARGIN) / CELL_WIDTH);
+    private String coordinatesToString(double x, double y) {
+        int col = (int) Math.round((x - MARGIN) / CELL_WIDTH);
+        int row = BOARD_SIZE - 1 - (int) Math.round((y - MARGIN) / CELL_WIDTH);
 
         char colChar = (char) (col + 'A');
         if (colChar >= 'I') colChar++;
