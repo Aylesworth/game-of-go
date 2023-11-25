@@ -33,6 +33,8 @@ private:
     vector<int> captured[3];
     float score[3];
     int consecutivePass;
+    int lastMove = -1;
+    vector<int> lastCaptured;
 
     void count(int pos, int color) {
         int piece = board[pos];
@@ -94,12 +96,56 @@ private:
                 if (liberties.size() == 0) {
                     copy(block.begin(), block.end(), back_inserter(captured[0]));
                     copy(block.begin(), block.end(), back_inserter(captured[color]));
-                    for (int c: captured[color]) printf("%d ", c); printf("\n");
                     clearBlock();
                 }
                 restoreBoard();
             }
         }
+    }
+
+    int canMove(int pos, int color) {
+        // check if the move can capture any opponent stones
+        board[pos] = color;
+        int directions[] = {-1, 1, -boardRange, boardRange};
+        int capturable = 0;
+
+        for (int dir: directions) {
+            count(pos + dir, 3 - color);
+            if (liberties.size() == 0) {
+                restoreBoard();
+                capturable = 1;
+                break;
+            }
+            restoreBoard();
+        }
+
+        // check if the position has any liberties
+        int hasLiberties = 1;
+        count(pos, color);
+        if (liberties.size() == 0) {
+            hasLiberties = 0;
+        }
+        restoreBoard();
+
+        if (!capturable && !hasLiberties) {
+            board[pos] = EMPTY;
+            return 0;
+        }
+
+        // check if the move breaks Ko rule
+        board[pos] = color;
+        capture(3 - color);
+        if (captured[0].size() == 1 && lastCaptured.size() == 1
+            && captured[0][0] == lastMove && pos == lastCaptured[0]) {
+            board[captured[0][0]] = 3 - color;
+            board[pos] = EMPTY;
+            return 0;
+        }
+        for (int cap: captured[0]) {
+            board[cap] = 3 - color;
+        }
+        board[pos] = EMPTY;
+        return 1;
     }
 
     void determineTerritory(int pos) {
@@ -188,18 +234,16 @@ public:
         if (board[pos] != EMPTY)
             return 0;
 
-        board[pos] = color;
-        count(pos, color);
-        if (liberties.size() == 0) {
-            board[pos] = EMPTY;
+        if (canMove(pos, color)) {
+            board[pos] = color;
+            capture(3 - color);
+            printBoard();
+            lastMove = pos;
+            lastCaptured = captured[0];
+            return 1;
+        } else {
             return 0;
         }
-        restoreBoard();
-
-        board[pos] = color;
-        capture(3 - color);
-        printBoard();
-        return 1;
     }
 
     int pass() {
