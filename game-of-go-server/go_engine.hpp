@@ -19,10 +19,10 @@ using namespace std;
 #define BLACK 1
 #define WHITE 2
 #define MARKER 4
-#define OFFBOARD 7
 #define LIBERTY 8
+#define OFFBOARD 12
 
-string symbol = ".#o .bw +";
+string symbol = ".#o .bw +   X";
 
 class GoGame {
 private:
@@ -106,6 +106,8 @@ private:
 
     int canMove(int pos, int color) {
         // check if the move can capture any opponent stones
+        if (board[pos] != EMPTY) return 0;
+
         board[pos] = color;
         int directions[] = {-1, 1, -boardRange, boardRange};
         int capturable = 0;
@@ -148,6 +150,33 @@ private:
         }
         board[pos] = EMPTY;
         return 1;
+    }
+
+    int detectsEdge(int pos) {
+        int directions[] = {boardRange, 1, -boardRange, -1};
+        for (int dir: directions) {
+            if (board[pos + dir] == OFFBOARD) return 1;
+        }
+        return 0;
+    }
+
+    int evaluate(int color) {
+        int bestCount = 0;
+        int bestLiberty = liberties[0];
+
+        vector<int> libertiesCopy = liberties;
+        for (int liberty: libertiesCopy) {
+            board[liberty] = color;
+            count(liberty, color);
+            if (liberties.size() > bestCount && !detectsEdge(liberty)) {
+                bestLiberty = liberty;
+                bestCount = liberties.size();
+            }
+            restoreBoard();
+            board[liberty] = EMPTY;
+        }
+
+        return bestLiberty;
     }
 
     void determineTerritory(int pos) {
@@ -214,7 +243,18 @@ public:
         }
     }
 
+    string toCoords(int pos) {
+        int row = pos / boardRange;
+        int col = pos % boardRange;
+
+        char colSymbol = col - 1 + 'A';
+        if (colSymbol >= 'I') colSymbol++;
+
+        return string(1, colSymbol) + to_string(row);
+    }
+
     void printBoard() {
+        printf("\n");
         for (int row = 0; row < boardRange; row++) {
             for (int col = 0; col < boardRange; col++) {
                 int pos = row * boardRange + col;
@@ -222,6 +262,7 @@ public:
             }
             printf("\n");
         }
+        printf("\n");
     }
 
     int play(string coords, int color) {
@@ -233,8 +274,6 @@ public:
         int row = stoi(coords.substr(1));
 
         int pos = row * boardRange + col;
-        if (board[pos] != EMPTY)
-            return 0;
 
         if (canMove(pos, color)) {
             board[pos] = color;
@@ -247,22 +286,193 @@ public:
         return 0;
     }
 
-    string generateMove(int color) {
+    string randomMove(int color) {
         srand(time(NULL));
         int pos;
         string coords;
+        int maxAttempts = 50;
+        int count = 0;
         do {
             pos = rand() % (boardRange * boardRange);
-            int row = pos / boardRange;
-            int col = pos % boardRange;
+            coords = toCoords(pos);
+            count++;
+        } while (!play(coords, color) && count < maxAttempts);
 
-            char colSymbol = col - 1 + 'A';
-            if (colSymbol >= 'I') colSymbol++;
-
-            coords = string(1, colSymbol) + to_string(row);
-        } while (!play(coords, color));
+        if (count >= maxAttempts) {
+            return "PA";
+        }
 
         return coords;
+    }
+
+    string generateMove(int color) {
+        if (lastMove == -1) {
+            return randomMove(color);
+        }
+
+        int bestMove = 0;
+        int capture = 0;
+        int save = 0;
+        int defend = 0;
+        int surround = 0;
+        int pattern = 0;
+
+        // capture opponent's group
+        for (int pos = 0; pos < board.size(); pos++) {
+            int piece = board[pos];
+            if (piece & (3 - color)) {
+                count(pos, 3 - color);
+                if (liberties.size() == 1) {
+                    int targetPos = liberties[0];
+                    restoreBoard();
+                    if (canMove(targetPos, color)) {
+                        bestMove = targetPos;
+                        capture = targetPos;
+                        break;
+                    }
+                }
+                restoreBoard();
+            }
+        }
+
+        // save own group
+        for (int pos = 0; pos < board.size(); pos++) {
+            int piece = board[pos];
+            if (piece & color) {
+                count(pos, color);
+                if (liberties.size() == 1) {
+                    int targetPos = liberties[0];
+                    restoreBoard();
+                    if (!detectsEdge(targetPos) && canMove(targetPos, color)) {
+                        bestMove = targetPos;
+                        save = targetPos;
+                        break;
+                    }
+                }
+                restoreBoard();
+            }
+        }
+
+        // defend own group
+        for (int pos = 0; pos < board.size(); pos++) {
+            int piece = board[pos];
+            if (piece & color) {
+                count(pos, color);
+                if (liberties.size() == 2) {
+                    int bestLiberty = evaluate(color);
+                    restoreBoard();
+                    if (canMove(bestLiberty, color)) {
+                        bestMove = bestLiberty;
+                        defend = bestLiberty;
+                        break;
+                    }
+                }
+                restoreBoard();
+            }
+        }
+
+        // surround opponent's group
+        for (int pos = 0; pos < board.size(); pos++) {
+            int piece = board[pos];
+            if (piece & (3 - color)) {
+                count(pos, 3 - color);
+                if (liberties.size() > 1) {
+                    int bestLiberty = evaluate(3 - color);
+                    restoreBoard();
+                    if (canMove(bestLiberty, color)) {
+                        bestMove = bestLiberty;
+                        surround = bestLiberty;
+                        break;
+                    }
+                }
+                restoreBoard();
+            }
+        }
+
+        // pattern matching
+        int targetOne, targetTwo;
+        for (int pos = 0; pos < board.size(); pos++) {
+            int piece = board[pos];
+            if (piece == OFFBOARD) continue;
+            if (piece & (3 - color)) {
+                targetOne = pos - boardRange + 1;
+                targetTwo = pos - boardRange - 1;
+                if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - boardRange, color)) {
+                    bestMove = pos - boardRange;
+                    pattern = bestMove;
+                }
+
+                targetOne = pos + 1;
+                targetTwo = pos - boardRange - 1;
+                if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - boardRange, color)) {
+                    bestMove = pos - boardRange;
+                    pattern = bestMove;
+                }
+
+                targetOne = pos + 1;
+                targetTwo = pos - 1;
+                if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos + boardRange, color)) {
+                    bestMove = pos + boardRange;
+                    pattern = bestMove;
+                }
+
+                targetOne = pos - boardRange + 2;
+                targetTwo = pos - boardRange - 1;
+                if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - boardRange, color)) {
+                    bestMove = pos - boardRange;
+                    pattern = bestMove;
+                }
+
+                targetOne = pos - boardRange + 2;
+                targetTwo = pos - boardRange - 2;
+                if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - boardRange, color)) {
+                    bestMove = pos - boardRange;
+                    pattern = bestMove;
+                }
+
+                targetOne = pos - 1;
+                targetTwo = pos + boardRange - 2;
+                if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos + boardRange, color)) {
+                    bestMove = pos + boardRange;
+                    pattern = bestMove;
+                }
+
+                targetOne = pos - boardRange;
+                targetTwo = pos - boardRange - 2;
+                if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - 1, color)) {
+                    bestMove = pos - 1;
+                    pattern = bestMove;
+                }
+            }
+        }
+
+        if (bestMove) {
+            printf("capture move: %s\n", toCoords(capture).c_str());
+            printf("save move: %s\n", toCoords(save).c_str());
+            printf("defend move: %s\n", toCoords(defend).c_str());
+            printf("surround move: %s\n", toCoords(surround).c_str());
+            printf("pattern move: %s\n", toCoords(pattern).c_str());
+
+            if (save) bestMove = save;
+            else if (capture) bestMove = capture;
+            else {
+                vector<int> possibleMoves;
+                if (defend) possibleMoves.push_back(defend);
+                if (surround) possibleMoves.push_back(surround);
+                if (pattern) possibleMoves.push_back(pattern);
+
+                srand(time(NULL));
+                int random = rand() % possibleMoves.size();
+                bestMove = possibleMoves[random];
+            }
+
+            string coords = toCoords(bestMove);
+            printf("chosen move: %s\n", coords.c_str());
+            play(coords, color);
+            return coords;
+        } else {
+            return randomMove(color);
+        }
     }
 
     int pass() {
@@ -273,12 +483,7 @@ public:
     vector <string> getCaptured() {
         vector <string> captured;
         for (int pos: this->captured[0]) {
-            int row = pos / boardRange;
-            int col = pos % boardRange;
-
-            char colSymbol = col - 1 + 'A';
-            if (colSymbol >= 'I') colSymbol++;
-            captured.push_back(string(1, colSymbol) + to_string(row));
+            captured.push_back(toCoords(pos));
         }
         return captured;
     }
