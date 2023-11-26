@@ -140,6 +140,26 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
     return 1;
 }
 
+void getGameResult(char *buff, GoGame *game) {
+    pair<float, float> scores = game->calculateScore();
+    vector <string> blackTerritory = game->getBlackTerritory();
+    vector <string> whiteTerritory = game->getWhiteTerritory();
+
+    memset(buff, 0, BUFF_SIZE);
+    sprintf(buff, "%.1f %.1f\n", scores.first, scores.second);
+
+    string territory = "";
+    for (string coords: blackTerritory) {
+        territory += coords + " ";
+    }
+    territory += "\n";
+    for (string coords: whiteTerritory) {
+        territory += coords + " ";
+    }
+    territory += "\n";
+    strcat(buff, territory.c_str());
+}
+
 void sendComputerMove(int clientSocket, GoGame *game, int color) {
     char buff[BUFF_SIZE];
     string move = game->generateMove(color);
@@ -156,6 +176,20 @@ void sendComputerMove(int clientSocket, GoGame *game, int color) {
     }
 
     handleSend(clientSocket, "MOVE", buff);
+
+    if (move == "PA") {
+        if (game->pass() == 2) {
+            getGameResult(buff, game);
+            handleSend(clientSocket, "RESULT", buff);
+
+            for (ClientInfo *client: clients) {
+                if (client->socket == clientSocket) {
+                    client->status = 0;
+                    notifyOnlineStatusChange();
+                }
+            }
+        }
+    }
 }
 
 void *handleRequest(void *arg) {
@@ -245,6 +279,7 @@ void *handleRequest(void *arg) {
             memset(buff, 0, BUFF_SIZE);
             sprintf(buff, "%s\n%d\n", thisClient->account->username.c_str(), boardSize);
             handleSend(opponentClient->socket, "INVITE", buff);
+
         } else if (strcmp(messageType, "INVRES") == 0) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
@@ -307,21 +342,37 @@ void *handleRequest(void *arg) {
                     handleSend(clientSocket, "MOVERR", "");
                 }
             } else {
-                if (opponentClient == NULL) {
-                    sendComputerMove(clientSocket, game, 3 - color);
-                    continue;
-                }
                 if (game->pass() == 2) {
-                    pair<float, float> scores = game->calculateScore();
-                    memset(buff, 0, BUFF_SIZE);
-                    sprintf(buff, "%.1f %.1f\n", scores.first, scores.second);
-                    handleSend(clientSocket, "RESULT", buff);
-                    handleSend(opponentClient->socket, "RESULT", buff);
+                    getGameResult(buff, game);
 
+                    handleSend(clientSocket, "RESULT", buff);
                     thisClient->status = 0;
-                    opponentClient->status = 0;
+
+                    if (opponentClient != NULL) {
+                        handleSend(opponentClient->socket, "RESULT", buff);
+                        opponentClient->status = 0;
+                    }
+
                     notifyOnlineStatusChange();
                 } else {
+                    if (opponentClient == NULL) {
+                        pair<float, float> scores = game->calculateScore();
+                        if ((color == 1 && scores.first < scores.second) ||
+                            (color == 2 && scores.first > scores.second)) {
+                            memset(buff, 0, BUFF_SIZE);
+                            sprintf(buff, "%d\n%s\n", 3 - color, "PA");
+                            handleSend(clientSocket, "MOVE", buff);
+
+                            getGameResult(buff, game);
+                            handleSend(clientSocket, "RESULT", buff);
+
+                            thisClient->status = 0;
+                            notifyOnlineStatusChange();
+                            continue;
+                        }
+                        sendComputerMove(clientSocket, game, 3 - color);
+                        continue;
+                    }
                     memset(buff, 0, BUFF_SIZE);
                     sprintf(buff, "%d\n%s\n", color, coords);
                     handleSend(opponentClient->socket, "MOVE", buff);

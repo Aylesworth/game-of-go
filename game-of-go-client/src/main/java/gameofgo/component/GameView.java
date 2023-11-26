@@ -1,18 +1,23 @@
 package gameofgo.component;
 
+import gameofgo.common.Configs;
 import gameofgo.common.Message;
 import gameofgo.service.SocketService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.image.WritableImage;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TextAlignment;
 
 public class GameView extends BorderPane {
     private static final Color BACKGROUND = Color.rgb(215, 186, 137);
@@ -33,6 +38,8 @@ public class GameView extends BorderPane {
 
     private Canvas gameBoard;
     private GraphicsContext gc;
+    private Label lblBlackScore;
+    private Label lblWhiteScore;
     private TableView<Move> tblLog;
 
     public GameView(int boardSize, int color) {
@@ -147,6 +154,11 @@ public class GameView extends BorderPane {
                     for (String cap : captured) {
                         removeStone(cap);
                     }
+                    if (color == 1) {
+                        lblBlackScore.setText((Integer.parseInt(lblBlackScore.getText()) + captured.length) + "");
+                    } else {
+                        lblWhiteScore.setText((Integer.parseInt(lblWhiteScore.getText()) + captured.length) + "");
+                    }
                 }
 
                 myTurn = !myTurn;
@@ -171,9 +183,20 @@ public class GameView extends BorderPane {
             btnSubmitMove.setDisable(true);
             btnPass.setDisable(true);
 
-            String[] scores = message.payload().split(" ");
+            String[] params = message.payload().split("\n");
+            String[] scores = params[0].split(" ");
             double blackScore = Float.parseFloat(scores[0]);
             double whiteScore = Float.parseFloat(scores[1]);
+
+            if (params[1].length() > 1) {
+                String[] blackTerritory = params[1].split(" ");
+                for (String coords : blackTerritory) drawTerritory(coords, 1);
+            }
+
+            if (params[2].length() > 1) {
+                String[] whiteTerritory = params[2].split(" ");
+                for (String coords : whiteTerritory) drawTerritory(coords, 2);
+            }
 
             String result = MY_COLOR == 1 ? (blackScore > whiteScore ? "won" : "lost") : (whiteScore > blackScore ? "won" : "lost");
 
@@ -187,6 +210,39 @@ public class GameView extends BorderPane {
     }
 
     private void setUpInformationPane() {
+        Label lblTitleBlackScore = new Label("BLACK");
+        lblTitleBlackScore.setMinWidth(150);
+        lblTitleBlackScore.setMinHeight(50);
+        lblTitleBlackScore.setBackground(Background.fill(Color.BLACK));
+        lblTitleBlackScore.setTextFill(Color.WHITE);
+        lblTitleBlackScore.setFont(Configs.primaryFont(16));
+        lblTitleBlackScore.setTextAlignment(TextAlignment.CENTER);
+
+        Label lblTitleWhiteScore = new Label("WHITE (+6.5)");
+        lblTitleWhiteScore.setMinWidth(150);
+        lblTitleWhiteScore.setMinHeight(50);
+        lblTitleWhiteScore.setBackground(Background.fill(Color.WHITE));
+        lblTitleWhiteScore.setFont(Configs.primaryFont(16));
+        lblTitleWhiteScore.setTextAlignment(TextAlignment.CENTER);
+
+        lblBlackScore = new Label("0");
+        lblBlackScore.setMinWidth(150);
+        lblBlackScore.setMinHeight(50);
+        lblBlackScore.setBackground(Background.fill(Color.WHITE));
+        lblBlackScore.setFont(Configs.primaryFont(16));
+        lblBlackScore.setTextAlignment(TextAlignment.CENTER);
+
+        lblWhiteScore = new Label("0");
+        lblWhiteScore.setMinWidth(150);
+        lblWhiteScore.setMinHeight(50);
+        lblWhiteScore.setBackground(Background.fill(Color.WHITE));
+        lblWhiteScore.setFont(Configs.primaryFont(16));
+        lblWhiteScore.setTextAlignment(TextAlignment.CENTER);
+
+        FlowPane scorePane = new FlowPane(Orientation.HORIZONTAL);
+        scorePane.setMaxWidth(300);
+        scorePane.getChildren().addAll(lblTitleBlackScore, lblTitleWhiteScore, lblBlackScore, lblWhiteScore);
+
         TableColumn<Move, String> playerCol = new TableColumn<>("Player");
         playerCol.setCellValueFactory(cellData ->
                 new SimpleStringProperty(cellData.getValue().getColor() == 1 ? "BLACK" : "WHITE"));
@@ -208,7 +264,7 @@ public class GameView extends BorderPane {
         pane.setPadding(new Insets(0, 10, 0, 10));
         pane.setSpacing(20);
         pane.setMinWidth(500);
-        pane.getChildren().addAll(tblLog);
+        pane.getChildren().addAll(scorePane, tblLog);
 
         setRight(pane);
     }
@@ -252,6 +308,15 @@ public class GameView extends BorderPane {
         if (x < FULL_WIDTH - MARGIN) gc.strokeLine(x, y, x + STONE_RADIUS, y);
         if (y > MARGIN) gc.strokeLine(x, y - STONE_RADIUS, x, y);
         if (y < FULL_WIDTH - MARGIN) gc.strokeLine(x, y, x, y + STONE_RADIUS);
+    }
+
+    private void drawTerritory(String coords, int color) {
+        Point2D coordinates = stringToCoordinates(coords);
+        double x = coordinates.getX();
+        double y = coordinates.getY();
+
+        gc.setFill(color == 1 ? Color.BLACK : Color.WHITE);
+        gc.fillRect(x - CELL_WIDTH / 10, y - CELL_WIDTH / 10, CELL_WIDTH / 5, CELL_WIDTH / 5);
     }
 
     private Point2D stringToCoordinates(String coords) {

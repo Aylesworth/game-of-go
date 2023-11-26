@@ -36,6 +36,8 @@ private:
     int consecutivePass;
     int lastMove = -1;
     vector<int> lastCaptured;
+    vector <string> blackTerritory;
+    vector <string> whiteTerritory;
 
     void count(int pos, int color) {
         int piece = board[pos];
@@ -96,7 +98,6 @@ private:
                 count(pos, color);
                 if (liberties.size() == 0) {
                     copy(block.begin(), block.end(), back_inserter(captured[0]));
-                    copy(block.begin(), block.end(), back_inserter(captured[color]));
                     clearBlock();
                 }
                 restoreBoard();
@@ -168,7 +169,7 @@ private:
         for (int liberty: libertiesCopy) {
             board[liberty] = color;
             count(liberty, color);
-            if (liberties.size() > bestCount && !detectsEdge(liberty)) {
+            if (liberties.size() > bestCount) {
                 bestLiberty = liberty;
                 bestCount = liberties.size();
             }
@@ -177,6 +178,15 @@ private:
         }
 
         return bestLiberty;
+    }
+
+    int libertiesIfPut(int pos, int color) {
+        board[pos] = color;
+        count(pos, color);
+        int n = liberties.size();
+        restoreBoard();
+        board[pos] = EMPTY;
+        return n;
     }
 
     void determineTerritory(int pos) {
@@ -216,9 +226,9 @@ private:
         if (side.size() == 4 || black.size() == white.size()) {
             marker = MARKER;
         } else if (black.size() > white.size()) {
-            marker = BLACK | MARKER;
+            marker = MARKER | BLACK;
         } else if (black.size() < white.size()) {
-            marker = WHITE | MARKER;
+            marker = MARKER | WHITE;
         }
 
         for (int p: visited) {
@@ -281,6 +291,7 @@ public:
             printBoard();
             lastMove = pos;
             lastCaptured = captured[0];
+            copy(lastCaptured.begin(), lastCaptured.end(), back_inserter(captured[3 - color]));
             return 1;
         }
         return 0;
@@ -343,7 +354,7 @@ public:
                 if (liberties.size() == 1) {
                     int targetPos = liberties[0];
                     restoreBoard();
-                    if (!detectsEdge(targetPos) && canMove(targetPos, color)) {
+                    if (canMove(targetPos, color) && libertiesIfPut(targetPos, color) > 1) {
                         bestMove = targetPos;
                         save = targetPos;
                         break;
@@ -361,7 +372,7 @@ public:
                 if (liberties.size() == 2) {
                     int bestLiberty = evaluate(color);
                     restoreBoard();
-                    if (canMove(bestLiberty, color)) {
+                    if (canMove(bestLiberty, color) && libertiesIfPut(bestLiberty, color) > 1) {
                         bestMove = bestLiberty;
                         defend = bestLiberty;
                         break;
@@ -379,7 +390,7 @@ public:
                 if (liberties.size() > 1) {
                     int bestLiberty = evaluate(3 - color);
                     restoreBoard();
-                    if (canMove(bestLiberty, color)) {
+                    if (canMove(bestLiberty, color) && libertiesIfPut(bestLiberty, color) > 1) {
                         bestMove = bestLiberty;
                         surround = bestLiberty;
                         break;
@@ -495,20 +506,35 @@ public:
             }
         }
 
-        float blackScore = 0.0;
-        float whiteScore = 6.5;
-
-        for (int pos = 0; pos < boardRange * boardRange; pos++) {
-            if (board[pos] == (MARKER | BLACK)) blackScore = blackScore + 1;
-            else if (board[pos] == (MARKER | WHITE)) whiteScore = whiteScore + 1;
-        }
-
-        blackScore = blackScore + captured[WHITE].size();
-        whiteScore = whiteScore + captured[BLACK].size();
-
         printBoard();
 
+        blackTerritory.clear();
+        whiteTerritory.clear();
+
+        for (int pos = 0; pos < boardRange * boardRange; pos++) {
+            if (board[pos] == (MARKER | BLACK)) {
+                blackTerritory.push_back(toCoords(pos));
+                board[pos] = EMPTY;
+            } else if (board[pos] == (MARKER | WHITE)) {
+                whiteTerritory.push_back(toCoords(pos));
+                board[pos] = EMPTY;
+            } else if (board[pos] == MARKER) {
+                board[pos] = EMPTY;
+            }
+        }
+
+        float blackScore = captured[WHITE].size() + blackTerritory.size();
+        float whiteScore = 6.5 + captured[BLACK].size() + whiteTerritory.size();
+
         return make_pair(blackScore, whiteScore);
+    }
+
+    vector <string> getBlackTerritory() {
+        return blackTerritory;
+    }
+
+    vector <string> getWhiteTerritory() {
+        return whiteTerritory;
     }
 };
 
