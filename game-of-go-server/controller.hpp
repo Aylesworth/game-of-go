@@ -141,23 +141,11 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
 }
 
 void getGameResult(char *buff, GoGame *game) {
-    pair<float, float> scores = game->calculateScore();
-    vector <string> blackTerritory = game->getBlackTerritory();
-    vector <string> whiteTerritory = game->getWhiteTerritory();
+    game->calculateScore();
 
     memset(buff, 0, BUFF_SIZE);
-    sprintf(buff, "%.1f %.1f\n", scores.first, scores.second);
-
-    string territory = "";
-    for (string coords: blackTerritory) {
-        territory += coords + " ";
-    }
-    territory += "\n";
-    for (string coords: whiteTerritory) {
-        territory += coords + " ";
-    }
-    territory += "\n";
-    strcat(buff, territory.c_str());
+    sprintf(buff, "%.1f %.1f\n%s\n%s\n", game->getBlackScore(), game->getWhiteScore(),
+            game->getBlackTerritory().c_str(), game->getWhiteTerritory().c_str());
 }
 
 void sendComputerMove(int clientSocket, GoGame *game, int color) {
@@ -178,9 +166,10 @@ void sendComputerMove(int clientSocket, GoGame *game, int color) {
     handleSend(clientSocket, "MOVE", buff);
 
     if (move == "PA") {
-        if (game->pass() == 2) {
+        if (game->pass(color) == 2) {
             getGameResult(buff, game);
             handleSend(clientSocket, "RESULT", buff);
+            handleSaveGame(game);
 
             for (ClientInfo *client: clients) {
                 if (client->socket == clientSocket) {
@@ -257,10 +246,14 @@ void *handleRequest(void *arg) {
                 notifyOnlineStatusChange();
 
                 GoGame *game = new GoGame(boardSize);
-                games[getKey(clientSocket, -1)] = game;
+                game->setId(generateGameId());
+                games[clientSocket] = game;
 
                 srand(time(NULL));
                 int randomColor = rand() % 2 + 1;
+
+                game->setBlackPlayerId(randomColor == 1 ? thisClient->account->id : -1);
+                game->setWhitePlayerId(randomColor == 1 ? -1 : thisClient->account->id);
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%d\n%d\n", boardSize, randomColor);
@@ -298,10 +291,16 @@ void *handleRequest(void *arg) {
                 notifyOnlineStatusChange();
 
                 GoGame *game = new GoGame(boardSize);
-                games[getKey(clientSocket, opponentClient->socket)] = game;
+                game->setId(generateGameId());
+
+                games[clientSocket] = game;
+                games[opponentClient->socket] = game;
 
                 srand(time(NULL));
                 int randomColor = rand() % 2 + 1;
+
+                game->setBlackPlayerId(randomColor == 1 ? thisClient->account->id : opponentClient->account->id);
+                game->setWhitePlayerId(randomColor == 1 ? opponentClient->account->id : thisClient->account->id);
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%d\n%d\n", boardSize, randomColor);
@@ -314,7 +313,7 @@ void *handleRequest(void *arg) {
                 opponentClient = NULL;
             }
         } else if (strcmp(messageType, "MOVE") == 0) {
-            GoGame *game = games[getKey(clientSocket, opponentClient == NULL ? -1 : opponentClient->socket)];
+            GoGame *game = games[clientSocket];
 
             int color = atoi(strtok(payload, "\n"));
             char *coords = strtok(NULL, "\n");
@@ -343,29 +342,38 @@ void *handleRequest(void *arg) {
                     handleSend(clientSocket, "MOVERR", "");
                 }
             } else {
-                if (game->pass() == 2) {
+                if (game->pass(color) == 2) {
                     getGameResult(buff, game);
+                    handleSaveGame(game);
 
                     handleSend(clientSocket, "RESULT", buff);
                     thisClient->status = 0;
+                    games[clientSocket] = NULL;
 
                     if (opponentClient != NULL) {
                         handleSend(opponentClient->socket, "RESULT", buff);
                         opponentClient->status = 0;
+                        games[opponentClient->socket] = NULL;
                     }
 
                     notifyOnlineStatusChange();
                 } else {
                     if (opponentClient == NULL) {
-                        pair<float, float> scores = game->calculateScore();
-                        if ((color == 1 && scores.first < scores.second) ||
-                            (color == 2 && scores.first > scores.second)) {
+                        game->calculateScore();
+                        float blackScore = game->getBlackScore();
+                        float whiteScore = game->getWhiteScore();
+
+                        if ((color == 1 && blackScore < whiteScore) ||
+                            (color == 2 && blackScore > whiteScore)) {
+                            game->pass(3 - color);
+
                             memset(buff, 0, BUFF_SIZE);
                             sprintf(buff, "%d\n%s\n", 3 - color, "PA");
                             handleSend(clientSocket, "MOVE", buff);
 
                             getGameResult(buff, game);
                             handleSend(clientSocket, "RESULT", buff);
+                            handleSaveGame(game);
 
                             thisClient->status = 0;
                             notifyOnlineStatusChange();

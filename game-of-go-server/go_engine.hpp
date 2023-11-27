@@ -12,6 +12,8 @@
 #include <set>
 #include <string>
 #include <algorithm>
+#include <ctime>
+#include <cstdlib>
 
 using namespace std;
 
@@ -22,22 +24,26 @@ using namespace std;
 #define LIBERTY 8
 #define OFFBOARD 12
 
-string symbol = ".#o .bw +   X";
-
 class GoGame {
 private:
+    string id;
+    int64_t timestamp;
+    int blackPlayerId;
+    int whitePlayerId;
     int boardSize;
     int boardRange;
     vector<int> board;
     vector<int> liberties;
     vector<int> block;
     vector<int> captured[3];
-    float score[3];
     int consecutivePass;
     int lastMove = -1;
     vector<int> lastCaptured;
-    vector <string> blackTerritory;
-    vector <string> whiteTerritory;
+    string log;
+    float blackScore;
+    float whiteScore;
+    string blackTerritory;
+    string whiteTerritory;
 
     void count(int pos, int color) {
         int piece = board[pos];
@@ -238,6 +244,7 @@ private:
 
 public:
     GoGame(int boardSize) {
+        this->timestamp = (int64_t) time(NULL);
         this->boardSize = boardSize;
         int boardRange = boardSize + 2;
         this->boardRange = boardRange;
@@ -264,6 +271,8 @@ public:
     }
 
     void printBoard() {
+        string symbol = ".#o .bw +   X";
+
         printf("\n");
         for (int row = 0; row < boardRange; row++) {
             for (int col = 0; col < boardRange; col++) {
@@ -292,6 +301,16 @@ public:
             lastMove = pos;
             lastCaptured = captured[0];
             copy(lastCaptured.begin(), lastCaptured.end(), back_inserter(captured[3 - color]));
+
+            log += to_string(color) + "+" + toCoords(lastMove);
+            if (lastCaptured.size() > 0) {
+                log += "/" + to_string(3 - color) + "-";
+                for (int i = 0; i < lastCaptured.size(); i++) {
+                    if (i > 0) log += ",";
+                    log += toCoords(lastCaptured[i]);
+                }
+            }
+            log += " ";
             return 1;
         }
         return 0;
@@ -307,7 +326,7 @@ public:
             pos = rand() % (boardRange * boardRange);
             coords = toCoords(pos);
             count++;
-        } while (!play(coords, color) && count < maxAttempts);
+        } while (count < maxAttempts && !play(coords, color));
 
         if (count >= maxAttempts) {
             return "PA";
@@ -488,8 +507,9 @@ public:
         }
     }
 
-    int pass() {
+    int pass(int color) {
         consecutivePass++;
+        log += to_string(color) + "=PA ";
         return consecutivePass;
     }
 
@@ -501,7 +521,7 @@ public:
         return captured;
     }
 
-    pair<float, float> calculateScore() {
+    void calculateScore() {
         for (int pos = 0; pos < boardRange * boardRange; pos++) {
             if (board[pos] == EMPTY) {
                 determineTerritory(pos);
@@ -510,33 +530,75 @@ public:
 
         printBoard();
 
-        blackTerritory.clear();
-        whiteTerritory.clear();
+        blackScore = 0.0;
+        whiteScore = 6.5;
+        blackTerritory = "";
+        whiteTerritory = "";
 
         for (int pos = 0; pos < boardRange * boardRange; pos++) {
             if (board[pos] == (MARKER | BLACK)) {
-                blackTerritory.push_back(toCoords(pos));
+                blackScore += 1;
+                blackTerritory += toCoords(pos) + " ";
                 board[pos] = EMPTY;
             } else if (board[pos] == (MARKER | WHITE)) {
-                whiteTerritory.push_back(toCoords(pos));
+                whiteScore += 1;
+                whiteTerritory += toCoords(pos) + " ";
                 board[pos] = EMPTY;
             } else if (board[pos] == MARKER) {
                 board[pos] = EMPTY;
             }
         }
 
-        float blackScore = captured[WHITE].size() + blackTerritory.size();
-        float whiteScore = 6.5 + captured[BLACK].size() + whiteTerritory.size();
-
-        return make_pair(blackScore, whiteScore);
+        blackScore += captured[WHITE].size();
+        whiteScore += captured[BLACK].size();
     }
 
-    vector <string> getBlackTerritory() {
+    string getId() {
+        return id;
+    }
+
+    void setId(string id) {
+        this->id = id;
+    }
+
+    int getBlackPlayerId() {
+        return blackPlayerId;
+    }
+
+    void setBlackPlayerId(int blackPlayerId) {
+        this->blackPlayerId = blackPlayerId;
+    }
+
+    int getWhitePlayerId() {
+        return whitePlayerId;
+    }
+
+    void setWhitePlayerId(int whitePlayerId) {
+        this->whitePlayerId = whitePlayerId;
+    }
+
+    float getBlackScore() {
+        return blackScore;
+    }
+
+    float getWhiteScore() {
+        return whiteScore;
+    }
+
+    string getBlackTerritory() {
         return blackTerritory;
     }
 
-    vector <string> getWhiteTerritory() {
+    string getWhiteTerritory() {
         return whiteTerritory;
+    }
+
+    string getLog() {
+        return log;
+    }
+
+    int64_t getTimestamp() {
+        return timestamp;
     }
 };
 

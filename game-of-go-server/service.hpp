@@ -8,8 +8,10 @@
 #include <string>
 #include <string.h>
 #include <openssl/md5.h>
+#include <time.h>
 #include "entity.hpp"
 #include "dao.hpp"
+
 using namespace std;
 
 char *encodeMD5(const char *input) {
@@ -59,6 +61,26 @@ Account *handleSignIn(char *payload) {
         return NULL;
 
     return account;
+}
+
+string generateGameId() {
+    string id = "";
+
+    srand(time(NULL));
+    vector<char> pool;
+    for (char c = 'A'; c <= 'Z'; c++) pool.push_back(c);
+    for (char c = 'a'; c <= 'z'; c++) pool.push_back(c);
+    for (char c = '0'; c <= '9'; c++) pool.push_back(c);
+
+    for (int i = 0; i < 16; i++) {
+        id += pool[rand() % pool.size()];
+    }
+
+    return id;
+}
+
+void handleSaveGame(GoGame *game) {
+    saveGame(game);
 }
 
 #endif //GAME_OF_GO_SERVER_SERVICE_HPP

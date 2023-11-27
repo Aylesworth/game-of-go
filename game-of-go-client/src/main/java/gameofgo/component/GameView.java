@@ -66,7 +66,7 @@ public class GameView extends BorderPane {
             gc.strokeLine(MARGIN, MARGIN + i * CELL_WIDTH, FULL_WIDTH - MARGIN, MARGIN + i * CELL_WIDTH);
         }
 
-        Button btnQuit = new Button("Quit game");
+        Button btnQuit = new Button("Leave game");
         btnQuit.setOnAction(event -> {
             MainWindow.getInstance().setCenter(new HomeView());
         });
@@ -129,6 +129,7 @@ public class GameView extends BorderPane {
             myTurn = false;
             btnSubmitMove.setDisable(true);
             btnPass.setDisable(true);
+            lblInstruction.setText(MY_COLOR == 1 ? "BLACK PASSES. WHITE'S TURN" : "WHITE PASSES. BLACK'S TURN");
 
             tblLog.getItems().add(new Move(MY_COLOR, "PA"));
             tblLog.scrollTo(tblLog.getItems().size() - 1);
@@ -194,12 +195,12 @@ public class GameView extends BorderPane {
             double whiteScore = Float.parseFloat(scores[1]);
             String winner = blackScore > whiteScore ? "BLACK" : "WHITE";
 
-            if (params.length > 0 && params[1].length() > 1) {
+            if (params.length > 1 && params[1].length() > 1) {
                 String[] blackTerritory = params[1].split(" ");
                 for (String coords : blackTerritory) drawTerritory(coords, 1);
             }
 
-            if (params.length > 1 && params[2].length() > 1) {
+            if (params.length > 2 && params[2].length() > 1) {
                 String[] whiteTerritory = params[2].split(" ");
                 for (String coords : whiteTerritory) drawTerritory(coords, 2);
             }
