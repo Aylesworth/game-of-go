@@ -482,7 +482,9 @@ public:
             play(coords, color);
             return coords;
         } else {
-            return randomMove(color);
+            srand(time(NULL));
+            int random = rand() % 4;
+            return !random ? "PA" : randomMove(color);
         }
     }
 

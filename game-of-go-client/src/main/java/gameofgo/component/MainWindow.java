@@ -12,6 +12,6 @@ public class MainWindow extends BorderPane {
     }
     private MainWindow() {
         super();
-        setPrefSize(1280, 800);
+        setPrefSize(1280, 900);
     }
 }

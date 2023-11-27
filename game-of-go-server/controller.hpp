@@ -333,9 +333,10 @@ void *handleRequest(void *arg) {
                     }
 
                     handleSend(clientSocket, "MOVE", buff);
-                    if (opponentClient != NULL)
+                    if (opponentClient != NULL) {
+                        usleep(10000);
                         handleSend(opponentClient->socket, "MOVE", buff);
-                    else {
+                    } else {
                         sendComputerMove(clientSocket, game, 3 - color);
                     }
                 } else {

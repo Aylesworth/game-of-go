@@ -12,10 +12,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.image.WritableImage;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 
@@ -38,6 +35,7 @@ public class GameView extends BorderPane {
 
     private Canvas gameBoard;
     private GraphicsContext gc;
+    private Label lblInstruction;
     private Label lblBlackScore;
     private Label lblWhiteScore;
     private TableView<Move> tblLog;
@@ -68,6 +66,15 @@ public class GameView extends BorderPane {
             gc.strokeLine(MARGIN, MARGIN + i * CELL_WIDTH, FULL_WIDTH - MARGIN, MARGIN + i * CELL_WIDTH);
         }
 
+        Button btnQuit = new Button("Quit game");
+        btnQuit.setOnAction(event -> {
+            MainWindow.getInstance().setCenter(new HomeView());
+        });
+        HBox quitBox = new HBox(btnQuit);
+
+        lblInstruction = new Label("YOU ARE " + (MY_COLOR == 1 ? "BLACK" : "WHITE") + ". BLACK'S TURN");
+        lblInstruction.setMinHeight(50);
+        lblInstruction.setFont(Configs.primaryFont(20));
         Button btnSubmitMove = new Button("Submit move");
         Button btnPass = new Button("Pass");
 
@@ -127,7 +134,7 @@ public class GameView extends BorderPane {
             tblLog.scrollTo(tblLog.getItems().size() - 1);
         });
 
-        VBox container = new VBox(gameBoard, btnSubmitMove, btnPass);
+        VBox container = new VBox(quitBox, lblInstruction, gameBoard, btnSubmitMove, btnPass);
         container.setAlignment(Pos.CENTER);
         container.setSpacing(15);
 
@@ -136,6 +143,7 @@ public class GameView extends BorderPane {
         socketService.on("MOVERR", message -> {
             removeStone(selectedPosition);
             selectedPosition = null;
+            lblInstruction.setText("INVALID MOVE!");
         });
 
         socketService.on("MOVE", message -> {
@@ -164,15 +172,12 @@ public class GameView extends BorderPane {
                 myTurn = !myTurn;
                 btnSubmitMove.setDisable(true);
                 btnPass.setDisable(!myTurn);
+                lblInstruction.setText(color == 1 ? "WHITE'S TURN" : "BLACK'S TURN");
             } else {
                 myTurn = true;
                 btnSubmitMove.setDisable(false);
                 btnPass.setDisable(false);
-
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setHeaderText("Opponent passed");
-                alert.getButtonTypes().setAll(ButtonType.OK);
-                alert.showAndWait();
+                lblInstruction.setText(color == 1 ? "BLACK PASSES. WHITE'S TURN" : "WHITE PASSES. BLACK'S TURN");
             }
 
             selectedPosition = null;
@@ -187,25 +192,19 @@ public class GameView extends BorderPane {
             String[] scores = params[0].split(" ");
             double blackScore = Float.parseFloat(scores[0]);
             double whiteScore = Float.parseFloat(scores[1]);
+            String winner = blackScore > whiteScore ? "BLACK" : "WHITE";
 
-            if (params[1].length() > 1) {
+            if (params.length > 0 && params[1].length() > 1) {
                 String[] blackTerritory = params[1].split(" ");
                 for (String coords : blackTerritory) drawTerritory(coords, 1);
             }
 
-            if (params[2].length() > 1) {
+            if (params.length > 1 && params[2].length() > 1) {
                 String[] whiteTerritory = params[2].split(" ");
                 for (String coords : whiteTerritory) drawTerritory(coords, 2);
             }
 
-            String result = MY_COLOR == 1 ? (blackScore > whiteScore ? "won" : "lost") : (whiteScore > blackScore ? "won" : "lost");
-
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setHeaderText("BLACK has %.0f points\nWHITE has %.1f points\nYou %s!".formatted(blackScore, whiteScore, result));
-            alert.getButtonTypes().setAll(ButtonType.OK);
-            alert.showAndWait();
-
-            MainWindow.getInstance().setCenter(new HomeView());
+            lblInstruction.setText("BLACK %.0f - %.1f WHITE. ".formatted(blackScore, whiteScore) + winner + " WINS!");
         });
     }
 
