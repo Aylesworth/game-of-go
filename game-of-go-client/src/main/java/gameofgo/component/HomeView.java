@@ -14,22 +14,28 @@ import javafx.scene.shape.Circle;
 
 import java.util.Optional;
 
-public class HomeView extends VBox {
-    private SocketService socketService = SocketService.getInstance();
+public class HomeView extends TabPane {
+    private final SocketService socketService = SocketService.getInstance();
     private int selectedBoardSize;
-    private VBox onlineBox;
     private ListView<HBox> onlineListView;
     private Button btnInvite;
 
     public HomeView() {
+        Tab playTab = new Tab("Play", createPlayVBox());
+        this.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
+        this.setTabDragPolicy(TabDragPolicy.FIXED);
+        this.setTabMinWidth(100);
+        this.getTabs().addAll(playTab, new Tab("Rankings"), new Tab("History"));
+    }
+
+    private VBox createPlayVBox() {
         Label lblPlay = new Label("PLAY");
         lblPlay.setFont(Configs.primaryFont(24));
 
-        onlineBox = createOnlineBox();
-
-        setAlignment(Pos.CENTER);
-        setSpacing(20);
-        getChildren().addAll(lblPlay, createSelectBoardSizeBox(), onlineBox);
+        VBox playVBox = new VBox();
+        playVBox.setAlignment(Pos.CENTER);
+        playVBox.setSpacing(20);
+        playVBox.getChildren().addAll(lblPlay, createSelectBoardSizeBox(), createOnlineBox());
 
         socketService.on("LSTONL", message -> {
             onlineListView.getItems().clear();
@@ -86,6 +92,8 @@ public class HomeView extends VBox {
         });
 
         socketService.send(new Message("LSTONL", ""));
+
+        return playVBox;
     }
 
     private HBox createSelectBoardSizeBox() {
