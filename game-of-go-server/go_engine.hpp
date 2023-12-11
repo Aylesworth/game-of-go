@@ -581,8 +581,16 @@ public:
         return blackScore;
     }
 
+    void setBlackScore(float blackScore) {
+        this->blackScore = blackScore;
+    }
+
     float getWhiteScore() {
         return whiteScore;
+    }
+
+    void setWhiteScore(float whiteScore) {
+        this->whiteScore = whiteScore;
     }
 
     string getBlackTerritory() {
@@ -599,6 +607,10 @@ public:
 
     int64_t getTimestamp() {
         return timestamp;
+    }
+
+    int getBoardSize() {
+        return boardSize;
     }
 };
 

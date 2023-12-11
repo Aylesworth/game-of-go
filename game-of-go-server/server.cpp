@@ -19,19 +19,6 @@ using namespace std;
 
 #define PORT 8080
 
-void *handleClient(void *arg) {
-    pthread_detach(pthread_self());
-
-    int clientSocket = *(int *) arg;
-    pthread_t receiveThread;
-    pthread_create(&receiveThread, NULL, handleRequest, (void *) &clientSocket);
-    pthread_join(receiveThread, NULL);
-
-    close(clientSocket);
-
-    return NULL;
-}
-
 int main() {
     int serverSocket, clientSocket;
     struct sockaddr_in server, client;
@@ -61,10 +48,11 @@ int main() {
 
     while (1) {
         clientSocket = accept(serverSocket, (struct sockaddr *) &client, &sinSize);
-        printf("Connection from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+        printf("New connection on socket %d\n", clientSocket);
+//        printf("Connection from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
         pthread_t clientThread;
-        pthread_create(&clientThread, NULL, handleClient, (void *) &clientSocket);
+        pthread_create(&clientThread, NULL, handleRequest, (void *) &clientSocket);
     }
 
     close(serverSocket);

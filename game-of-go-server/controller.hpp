@@ -28,8 +28,8 @@ struct ClientInfo {
 
     ClientInfo() {}
 
-    ClientInfo(int socket, Account *account) :
-            socket(socket), account(account) {}
+    ClientInfo(int socket, Account *account, int status) :
+            socket(socket), account(account), status(status) {}
 
     bool operator<(const ClientInfo &other) const {
         return account->username < other.account->username;
@@ -66,24 +66,17 @@ void handleClientDisconnect(int clientSocket) {
     }
 }
 
-int getKey(int socket1, int socket2) {
-    int h1 = hash < int > {}(socket1);
-    int h2 = hash < int > {}(socket2);
-    int key = (h1 + h2) ^ ((h1 - h2) & (h2 - h1)) ^ (h1 * h2) ^ (h1 / h2) ^ (h2 / h1) ^ (h1 % h2) ^ (h2 % h1);
-    return key;
-}
-
 int handleSend(int clientSocket, const char *messageType, const char *payload) {
     char buff[BUFF_SIZE];
     int bytesSent;
-    int blockTypeSize = 4;
+    int blockTypeSize = 1;
     int headerSize = strlen(messageType) + blockTypeSize + 2;
 
     while (headerSize + strlen(payload) > BUFF_SIZE - 1) {
         memset(buff, 0, BUFF_SIZE);
         char *payloadSubstring;
         strncpy(payloadSubstring, payload, BUFF_SIZE - 1 - headerSize);
-        sprintf(buff, "%s %s %d\n%s", messageType, "MID ", BUFF_SIZE - 1 - headerSize, payloadSubstring);
+        sprintf(buff, "%s %s %d\n%s", messageType, "M", BUFF_SIZE - 1 - headerSize, payloadSubstring);
 
         bytesSent = send(clientSocket, buff, strlen(buff), 0);
         if (bytesSent < 0) {
@@ -94,7 +87,7 @@ int handleSend(int clientSocket, const char *messageType, const char *payload) {
     }
 
     memset(buff, 0, BUFF_SIZE);
-    sprintf(buff, "%s %s %ld\n%s", messageType, "LAST", strlen(payload), payload);
+    sprintf(buff, "%s %s %ld\n%s", messageType, "L", strlen(payload), payload);
     bytesSent = send(clientSocket, buff, strlen(buff), 0);
     printf("Sent to %d:\n%s\n", clientSocket, buff);
 
@@ -111,7 +104,7 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
         memset(buff, 0, BUFF_SIZE);
         int bytesReceived = recv(clientSocket, buff, BUFF_SIZE - 1, 0);
         if (bytesReceived <= 0) {
-            printf("Client disconnected.\n");
+            printf("Socket %d closed.\n", clientSocket);
             handleClientDisconnect(clientSocket);
             return 0;
         }
@@ -131,7 +124,7 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
         if (buff[headerEndIndex + 1] != '\0')
             strcat(payload, buff + headerEndIndex + 1);
 //        printf("payload = %s\n", payload);
-    } while (strcmp(blockType, "LAST") != 0);
+    } while (strcmp(blockType, "L") != 0);
 
     strcat(payload, "\0");
 
@@ -181,6 +174,7 @@ void sendComputerMove(int clientSocket, GoGame *game, int color) {
     }
 }
 
+// Handle each message from a client
 void *handleRequest(void *arg) {
     pthread_detach(pthread_self());
 
@@ -191,6 +185,8 @@ void *handleRequest(void *arg) {
     char buff[BUFF_SIZE];
 
     while (handleReceive(clientSocket, messageType, payload)) {
+
+        // Register account
         if (strcmp(messageType, "REGIST") == 0) {
             int res = handleCreateAccount(payload);
             switch (res) {
@@ -201,18 +197,24 @@ void *handleRequest(void *arg) {
                     handleSend(clientSocket, "ERROR", "Username already used");
                     break;
             }
-        } else if (strcmp(messageType, "LOGIN") == 0) {
+        }
+
+            // Login account
+        else if (strcmp(messageType, "LOGIN") == 0) {
             Account *account = handleSignIn(payload);
             if (account == NULL) {
                 handleSend(clientSocket, "ERROR", "Wrong username or password");
             } else {
                 handleSend(clientSocket, "OK", "Signed in successfully");
 
-                thisClient = new ClientInfo(clientSocket, account);
+                thisClient = new ClientInfo(clientSocket, account, 0);
                 clients.insert(thisClient);
                 notifyOnlineStatusChange();
             }
-        } else if (strcmp(messageType, "LSTONL") == 0) {
+        }
+
+            // Get online player list
+        else if (strcmp(messageType, "LSTONL") == 0) {
             payload[0] = '\0';
             char content[BUFF_SIZE];
 
@@ -229,7 +231,10 @@ void *handleRequest(void *arg) {
             }
 
             handleSend(clientSocket, "LSTONL", payload);
-        } else if (strcmp(messageType, "INVITE") == 0) {
+        }
+
+            // Invite other player
+        else if (strcmp(messageType, "INVITE") == 0) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
 
@@ -273,7 +278,10 @@ void *handleRequest(void *arg) {
             sprintf(buff, "%s\n%d\n", thisClient->account->username.c_str(), boardSize);
             handleSend(opponentClient->socket, "INVITE", buff);
 
-        } else if (strcmp(messageType, "INVRES") == 0) {
+        }
+
+            // Reply to invitation
+        else if (strcmp(messageType, "INVRES") == 0) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
             char *reply = strtok(NULL, "\n");
@@ -312,7 +320,10 @@ void *handleRequest(void *arg) {
             } else {
                 opponentClient = NULL;
             }
-        } else if (strcmp(messageType, "MOVE") == 0) {
+        }
+
+            // Make a move
+        else if (strcmp(messageType, "MOVE") == 0) {
             GoGame *game = games[clientSocket];
 
             int color = atoi(strtok(payload, "\n"));
@@ -347,16 +358,9 @@ void *handleRequest(void *arg) {
                     handleSaveGame(game);
 
                     handleSend(clientSocket, "RESULT", buff);
-                    thisClient->status = 0;
-                    games[clientSocket] = NULL;
-
                     if (opponentClient != NULL) {
                         handleSend(opponentClient->socket, "RESULT", buff);
-                        opponentClient->status = 0;
-                        games[opponentClient->socket] = NULL;
                     }
-
-                    notifyOnlineStatusChange();
                 } else {
                     if (opponentClient == NULL) {
                         game->calculateScore();
@@ -374,9 +378,6 @@ void *handleRequest(void *arg) {
                             getGameResult(buff, game);
                             handleSend(clientSocket, "RESULT", buff);
                             handleSaveGame(game);
-
-                            thisClient->status = 0;
-                            notifyOnlineStatusChange();
                             continue;
                         }
                         sendComputerMove(clientSocket, game, 3 - color);
@@ -388,8 +389,48 @@ void *handleRequest(void *arg) {
                 }
             }
         }
+
+            // Request game interrupt
+        else if (strcmp(messageType, "INTRPT") == 0) {
+            GoGame *game = games[clientSocket];
+
+            int color = atoi(strtok(payload, "\n"));
+            char *interruptType = strtok(NULL, "\n");
+
+            if (strcmp(interruptType, "RESIGN") == 0) {
+                if (opponentClient != NULL) {
+                    memset(buff, 0, BUFF_SIZE);
+                    sprintf(buff, "%d\nRESIGN\n", color);
+                    handleSend(opponentClient->socket, "INTRPT", buff);
+                }
+
+                game->calculateScore();
+                if (color == 1) game->setBlackScore(-1);
+                else game->setWhiteScore(-1);
+
+                memset(buff, 0, BUFF_SIZE);
+                sprintf(buff, "%.1f %.1f\n%s\n%s\n", game->getBlackScore(), game->getWhiteScore(),
+                        game->getBlackTerritory().c_str(), game->getWhiteTerritory().c_str());
+
+                handleSend(clientSocket, "RESULT", buff);
+                if (opponentClient != NULL) {
+                    handleSend(opponentClient->socket, "RESULT", buff);
+                }
+
+                handleSaveGame(game);
+            }
+        }
+
+            // Confirm game result
+        else if (strcmp(messageType, "RESACK") == 0) {
+            thisClient->status = 0;
+            opponentClient = NULL;
+            games[clientSocket] = NULL;
+            notifyOnlineStatusChange();
+        }
     }
 
+    close(clientSocket);
     return NULL;
 }
 

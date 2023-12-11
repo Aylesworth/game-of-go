@@ -50,16 +50,17 @@ Account *findAccount(string username) {
 
 void saveGame(GoGame *game) {
     auto pstmt = con->prepareStatement(
-            "INSERT INTO game (id, time, black_player, white_player, log, black_score, white_score, black_territory, white_territory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            "INSERT INTO game (id, time, board_size, black_player, white_player, log, black_score, white_score, black_territory, white_territory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     pstmt->setString(1, game->getId());
     pstmt->setInt64(2, game->getTimestamp());
-    pstmt->setInt(3, game->getBlackPlayerId());
-    pstmt->setInt(4, game->getWhitePlayerId());
-    pstmt->setString(5, game->getLog());
-    pstmt->setDouble(6, game->getBlackScore());
-    pstmt->setDouble(7, game->getWhiteScore());
-    pstmt->setString(8, game->getBlackTerritory());
-    pstmt->setString(9, game->getWhiteTerritory());
+    pstmt->setInt(3, game->getBoardSize());
+    pstmt->setInt(4, game->getBlackPlayerId());
+    pstmt->setInt(5, game->getWhitePlayerId());
+    pstmt->setString(6, game->getLog());
+    pstmt->setDouble(7, game->getBlackScore());
+    pstmt->setDouble(8, game->getWhiteScore());
+    pstmt->setString(9, game->getBlackTerritory());
+    pstmt->setString(10, game->getWhiteTerritory());
     pstmt->executeUpdate();
 }
 

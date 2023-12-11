@@ -62,18 +62,28 @@ public class SocketService {
         String payload = message.payload();
         String buff;
 
-        int blockTypeLength = 4;
+        int blockTypeLength = 1;
         int headerLength = messageType.length() + blockTypeLength + 2;
         while (headerLength + payload.length() > BUFFER_SIZE - 1) {
-            buff = messageType + " MID " + (BUFFER_SIZE - 1 - headerLength) + "\n" + payload.substring(0, BUFFER_SIZE - 1 - headerLength);
+            buff = messageType + " M " + (BUFFER_SIZE - 1 - headerLength) + "\n" + payload.substring(0, BUFFER_SIZE - 1 - headerLength);
             send(buff);
             payload = payload.substring(BUFFER_SIZE - 1 - headerLength);
             System.out.println("Sent:\n" + buff);
         }
 
-        buff = messageType + " LAST " + payload.length() + "\n" + payload;
+        buff = messageType + " L " + payload.length() + "\n" + payload;
         send(buff);
         System.out.println("Sent:\n" + buff);
+    }
+
+    public void send(Message message, long intervalBeforeMillis, long intervalAfterMillis) {
+        try {
+            Thread.sleep(intervalBeforeMillis);
+            send(message);
+            Thread.sleep(intervalAfterMillis);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public Message receive() {
@@ -107,7 +117,7 @@ public class SocketService {
                 }
 
                 payloadBuilder.append(payload);
-            } while (!blockType.equals("LAST"));
+            } while (!blockType.equals("L"));
 
             return new Message(messageType, payloadBuilder.toString());
         } catch (Exception e) {

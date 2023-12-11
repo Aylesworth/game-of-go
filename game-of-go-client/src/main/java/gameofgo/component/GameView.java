@@ -16,6 +16,8 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 
+import java.util.Optional;
+
 public class GameView extends BorderPane {
     private static final Color BACKGROUND = Color.rgb(215, 186, 137);
     private static final Color LINE_COLOR = Color.BROWN;
@@ -29,6 +31,7 @@ public class GameView extends BorderPane {
     private final int MY_COLOR;
     private boolean myTurn;
     private final SocketService socketService = SocketService.getInstance();
+    private boolean gameFinished;
     private String lastPosition;
     private int lastColor;
     private String selectedPosition;
@@ -47,6 +50,7 @@ public class GameView extends BorderPane {
         this.STONE_RADIUS = 0.45 * CELL_WIDTH;
         this.MY_COLOR = color;
         this.myTurn = color == 1;
+        this.gameFinished = false;
         setupGameBoard();
         setUpInformationPane();
     }
@@ -66,17 +70,16 @@ public class GameView extends BorderPane {
             gc.strokeLine(MARGIN, MARGIN + i * CELL_WIDTH, FULL_WIDTH - MARGIN, MARGIN + i * CELL_WIDTH);
         }
 
-        Button btnQuit = new Button("Leave game");
-        btnQuit.setOnAction(event -> {
-            MainWindow.getInstance().setCenter(new HomeView());
-        });
-        HBox quitBox = new HBox(btnQuit);
+        Button btnLeave = new Button("Leave game");
+        btnLeave.setOnAction(event -> requestQuitGame());
+        HBox quitBox = new HBox(btnLeave);
 
         lblInstruction = new Label("YOU ARE " + (MY_COLOR == 1 ? "BLACK" : "WHITE") + ". BLACK'S TURN");
         lblInstruction.setMinHeight(50);
         lblInstruction.setFont(Configs.primaryFont(20));
         Button btnSubmitMove = new Button("Submit move");
         Button btnPass = new Button("Pass");
+        Button btnResign = new Button("Resign");
 
         gameBoard.setOnMouseClicked(event -> {
             if (!myTurn)
@@ -85,14 +88,17 @@ public class GameView extends BorderPane {
             double x = event.getX();
             double y = event.getY();
 
-            if (x < MARGIN || x > FULL_WIDTH - MARGIN || y < MARGIN || y > FULL_WIDTH - MARGIN)
-                return;
+            if (x < MARGIN) x = MARGIN;
+            if (x > FULL_WIDTH - MARGIN) x = FULL_WIDTH - MARGIN;
+            if (y < MARGIN) y = MARGIN;
+            if (y > FULL_WIDTH - MARGIN) y = FULL_WIDTH - MARGIN;
 
             String position = coordinatesToString(x, y);
             if (position.equals(selectedPosition)) {
-                removeStone(selectedPosition);
-                selectedPosition = null;
-                btnSubmitMove.setDisable(true);
+//                removeStone(selectedPosition);
+//                selectedPosition = null;
+//                btnSubmitMove.setDisable(true);
+                socketService.send(new Message("MOVE", "" + MY_COLOR + '\n' + selectedPosition + '\n'));
                 return;
             }
 
@@ -105,8 +111,9 @@ public class GameView extends BorderPane {
                 return;
             }
 
-            if (selectedPosition != null)
+            if (selectedPosition != null) {
                 removeStone(selectedPosition);
+            }
 
             selectedPosition = position;
 
@@ -122,10 +129,18 @@ public class GameView extends BorderPane {
 
         btnPass.setDisable(!myTurn);
         btnPass.setOnAction(event -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setHeaderText("Are you sure you want to pass?");
+            alert.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
+            Optional<ButtonType> answer = alert.showAndWait();
+
+            if (answer.isEmpty() || !answer.get().equals(ButtonType.YES))
+                return;
+
             if (selectedPosition != null)
                 removeStone(selectedPosition);
 
-            socketService.send(new Message("MOVE", "" + MY_COLOR + '\n' + "PA" + '\n'));
+            socketService.send(new Message("MOVE", MY_COLOR + "\nPA\n"));
             myTurn = false;
             btnSubmitMove.setDisable(true);
             btnPass.setDisable(true);
@@ -135,7 +150,32 @@ public class GameView extends BorderPane {
             tblLog.scrollTo(tblLog.getItems().size() - 1);
         });
 
-        VBox container = new VBox(quitBox, lblInstruction, gameBoard, btnSubmitMove, btnPass);
+        btnResign.setOnAction(event -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setHeaderText("Are you sure you want to resign?");
+            alert.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
+            Optional<ButtonType> answer = alert.showAndWait();
+            if (answer.isEmpty() || !answer.get().equals(ButtonType.YES))
+                return;
+
+            if (selectedPosition != null)
+                removeStone(selectedPosition);
+
+            socketService.send(new Message("INTRPT", MY_COLOR + "\nRESIGN\n"));
+            myTurn = false;
+            btnSubmitMove.setDisable(true);
+            btnPass.setDisable(true);
+            lblInstruction.setText(MY_COLOR == 1 ? "BLACK RESIGNS. WHITE WINS!" : "WHITE RESIGNS. BLACK WINS!");
+
+            tblLog.getItems().add(new Move(MY_COLOR, "RS"));
+            tblLog.scrollTo(tblLog.getItems().size() - 1);
+        });
+
+        HBox buttonBox = new HBox(btnSubmitMove, btnPass, btnResign);
+        buttonBox.setAlignment(Pos.CENTER);
+        buttonBox.setSpacing(20);
+
+        VBox container = new VBox(quitBox, lblInstruction, gameBoard, buttonBox);
         container.setAlignment(Pos.CENTER);
         container.setSpacing(15);
 
@@ -184,10 +224,26 @@ public class GameView extends BorderPane {
             selectedPosition = null;
         });
 
+        socketService.on("INTRPT", message -> {
+            String[] params = message.payload().split("\n");
+            int color = Integer.parseInt(params[0]);
+            if (params[1].equals("RESIGN")) {
+                myTurn = false;
+                btnSubmitMove.setDisable(true);
+                btnPass.setDisable(true);
+                btnResign.setDisable(true);
+                lblInstruction.setText(color == 1 ? "BLACK RESIGNS. WHITE WINS!" : "WHITE RESIGNS. BLACK WINS!");
+                tblLog.getItems().add(new Move(MY_COLOR, "RS"));
+                tblLog.scrollTo(tblLog.getItems().size() - 1);
+            }
+        });
+
         socketService.on("RESULT", message -> {
+            gameFinished = true;
             myTurn = false;
             btnSubmitMove.setDisable(true);
             btnPass.setDisable(true);
+            btnResign.setDisable(true);
 
             String[] params = message.payload().split("\n");
             String[] scores = params[0].split(" ");
@@ -205,7 +261,7 @@ public class GameView extends BorderPane {
                 for (String coords : whiteTerritory) drawTerritory(coords, 2);
             }
 
-            lblInstruction.setText("BLACK %.0f - %.1f WHITE. ".formatted(blackScore, whiteScore) + winner + " WINS!");
+            lblInstruction.setText("BLACK %.1f : %.1f WHITE. ".formatted(blackScore, whiteScore) + winner + " WINS!");
         });
     }
 
@@ -250,7 +306,11 @@ public class GameView extends BorderPane {
         TableColumn<Move, String> coordsCol = new TableColumn<>("Move");
         coordsCol.setCellValueFactory(cellData -> {
             Move move = cellData.getValue();
-            String action = move.getCoords().equals("PA") ? "passes" : "plays " + move.getCoords();
+            String action = switch (move.getCoords()) {
+                case "PA" -> "passes";
+                case "RS" -> "resigns";
+                default -> "plays " + move.getCoords();
+            };
             return new SimpleStringProperty(action);
         });
 
@@ -267,6 +327,27 @@ public class GameView extends BorderPane {
         pane.getChildren().addAll(scorePane, tblLog);
 
         setRight(pane);
+    }
+
+    public boolean requestQuitGame() {
+        if (gameFinished) {
+            socketService.send(new Message("RESACK", ""));
+            MainWindow.getInstance().setCenter(new HomeView());
+            return true;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setHeaderText("Do you really want to quit this game?\nThe game will be counted as your defeat.");
+        alert.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
+        Optional<ButtonType> answer = alert.showAndWait();
+
+        if (answer.isPresent() && answer.get().equals(ButtonType.YES)) {
+            socketService.send(new Message("INTRPT", MY_COLOR + "\nRESIGN\n"), 0, 10);
+            socketService.send(new Message("RESACK", ""), 0, 10);
+            MainWindow.getInstance().setCenter(new HomeView());
+            return true;
+        }
+        return false;
     }
 
     private void play(String coords, int color) {

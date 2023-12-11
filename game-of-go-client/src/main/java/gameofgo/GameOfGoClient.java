@@ -1,5 +1,6 @@
 package gameofgo;
 
+import gameofgo.component.GameView;
 import gameofgo.component.MainWindow;
 import gameofgo.component.LoginView;
 import gameofgo.service.SocketService;
@@ -13,6 +14,14 @@ public class GameOfGoClient extends Application {
         MainWindow mainWindow = MainWindow.getInstance();
         mainWindow.setCenter(new LoginView());
         stage.setScene(new Scene(mainWindow));
+        stage.setOnCloseRequest(event -> {
+            if (mainWindow.getCenter() instanceof GameView gameView) {
+                event.consume();
+                if (gameView.requestQuitGame())
+                    stage.close();
+            }
+        });
+        stage.setTitle("Game Of Go");
         stage.show();
     }
 
