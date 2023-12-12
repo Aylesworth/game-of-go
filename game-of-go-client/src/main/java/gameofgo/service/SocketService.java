@@ -2,6 +2,7 @@ package gameofgo.service;
 
 import gameofgo.common.Message;
 import javafx.application.Platform;
+import javafx.concurrent.Task;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -21,7 +22,7 @@ public class SocketService {
         return instance;
     }
 
-    private static final String SERVER_ADDRESS = "localhost";
+    private static final String SERVER_ADDRESS = "192.168.43.4";
     private static final int SERVER_PORT = 8080;
     private static final int BUFFER_SIZE = 1024;
     private Socket socket;
@@ -129,6 +130,12 @@ public class SocketService {
         handlers.put(messageType, handler);
     }
 
+    public void removeListeners(String... messageTypes) {
+        for (String messageType : messageTypes) {
+            handlers.remove(messageType);
+        }
+    }
+
     private void listen() {
         listeningThread = new Thread(() -> {
             while (true) {
@@ -137,8 +144,9 @@ public class SocketService {
                     Message receivedMessage = receive();
                     String messageType = receivedMessage.messageType();
                     if (handlers.containsKey(messageType)) {
-                        Platform.runLater(() ->
-                                handlers.get(messageType).handle(receivedMessage));
+                        Platform.runLater(() -> {
+                            handlers.get(messageType).handle(receivedMessage);
+                        });
                     }
                 } catch (Exception e) {
                     if (Thread.currentThread().isInterrupted())

@@ -1,6 +1,7 @@
 package gameofgo;
 
 import gameofgo.component.GameView;
+import gameofgo.component.HomeView;
 import gameofgo.component.MainWindow;
 import gameofgo.component.LoginView;
 import gameofgo.service.SocketService;

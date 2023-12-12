@@ -1,5 +1,6 @@
 package gameofgo.component;
 
+import gameofgo.common.Configs;
 import javafx.scene.layout.BorderPane;
 
 public class MainWindow extends BorderPane {
@@ -10,8 +11,9 @@ public class MainWindow extends BorderPane {
             INSTANCE = new MainWindow();
         return INSTANCE;
     }
+
     private MainWindow() {
         super();
-        setPrefSize(1280, 900);
+        setPrefSize(Configs.WINDOW_WIDTH, Configs.WINDOW_HEIGHT);
     }
 }

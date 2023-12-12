@@ -404,9 +404,7 @@ void *handleRequest(void *arg) {
                     handleSend(opponentClient->socket, "INTRPT", buff);
                 }
 
-                game->calculateScore();
-                if (color == 1) game->setBlackScore(-1);
-                else game->setWhiteScore(-1);
+                game->resign(color);
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%.1f %.1f\n%s\n%s\n", game->getBlackScore(), game->getWhiteScore(),
@@ -427,6 +425,21 @@ void *handleRequest(void *arg) {
             opponentClient = NULL;
             games[clientSocket] = NULL;
             notifyOnlineStatusChange();
+        }
+
+            // Get history of played games
+        else if (strcmp(messageType, "HISTRY") == 0) {
+            vector < GameRecord * > games = handleGetHistory(thisClient->account->id);
+            memset(payload, 0, 16 * BUFF_SIZE);
+            memset(buff, 0, BUFF_SIZE);
+            for (const GameRecord *game: games) {
+                sprintf(buff, "%s %d %s %s %.2f %.2f %ld\n", game->id.c_str(), game->boardSize,
+                        game->blackPlayer.c_str(), game->whitePlayer.c_str(),
+                        game->blackScore, game->whiteScore, game->time);
+                strcat(payload, buff);
+            }
+            strcat(payload, "\0");
+            handleSend(clientSocket, "HISTRY", payload);
         }
     }
 

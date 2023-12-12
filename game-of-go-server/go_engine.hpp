@@ -513,6 +513,13 @@ public:
         return consecutivePass;
     }
 
+    void resign(int color) {
+        calculateScore();
+        if (color == BLACK) blackScore = -1;
+        else whiteScore = -1;
+        log += to_string(color) + "=RS ";
+    }
+
     vector <string> getCaptured() {
         vector <string> captured;
         for (int pos: this->captured[0]) {

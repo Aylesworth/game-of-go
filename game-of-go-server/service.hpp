@@ -83,4 +83,8 @@ void handleSaveGame(GoGame *game) {
     saveGame(game);
 }
 
+vector<GameRecord *> handleGetHistory(int playerId) {
+    return findGamesByPlayer(playerId);
+}
+
 #endif //GAME_OF_GO_SERVER_SERVICE_HPP
