@@ -1,9 +1,6 @@
 package gameofgo;
 
-import gameofgo.component.GameView;
-import gameofgo.component.HomeView;
-import gameofgo.component.MainWindow;
-import gameofgo.component.LoginView;
+import gameofgo.component.*;
 import gameofgo.service.SocketService;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -14,6 +11,7 @@ public class GameOfGoClient extends Application {
     public void start(Stage stage) throws Exception {
         MainWindow mainWindow = MainWindow.getInstance();
         mainWindow.setCenter(new LoginView());
+//        mainWindow.setCenter(new ReplayView(13, "1+E2 2+E3 1+D3 2+D2/1-E2 1=PA"));
         stage.setScene(new Scene(mainWindow));
         stage.setOnCloseRequest(event -> {
             if (mainWindow.getCenter() instanceof GameView gameView) {

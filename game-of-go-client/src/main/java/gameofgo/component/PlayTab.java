@@ -13,6 +13,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.text.FontWeight;
 
 import java.util.Optional;
 
@@ -29,7 +30,7 @@ public class PlayTab extends Tab {
 
     private Node createContent() {
         Label lblPlay = new Label("PLAY");
-        lblPlay.setFont(Configs.primaryFont(24));
+        lblPlay.setFont(Configs.primaryFont(FontWeight.BOLD, 24));
 
         VBox playVBox = new VBox();
         playVBox.setAlignment(Pos.CENTER);
@@ -90,7 +91,7 @@ public class PlayTab extends Tab {
             String[] params = message.payload().split("\n");
             int boardSize = Integer.parseInt(params[0]);
             int color = Integer.parseInt(params[1]);
-            MainWindow.getInstance().setCenter(new GameView(boardSize, color));
+            MainWindow.getInstance().next(new GameView(boardSize, color));
         });
 
         socketService.send(new Message("LSTONL", ""));

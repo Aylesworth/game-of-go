@@ -35,4 +35,15 @@ struct GameRecord {
             blackScore(blackScore), whiteScore(whiteScore), time(time) {}
 };
 
+struct GameReplay {
+    string log;
+    string blackTerritory;
+    string whiteTerritory;
+
+    GameReplay() {}
+
+    GameReplay(string log, string blackTerritory, string whiteTerritory) :
+            log(log), blackTerritory(blackTerritory), whiteTerritory(whiteTerritory) {}
+};
+
 #endif

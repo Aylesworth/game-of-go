@@ -6,10 +6,7 @@ import gameofgo.service.SocketService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.*;
@@ -19,35 +16,23 @@ import javafx.scene.text.TextAlignment;
 import java.util.Optional;
 
 public class GameView extends BorderPane {
-    private static final Color BACKGROUND = Color.rgb(215, 186, 137);
-    private static final Color LINE_COLOR = Color.BROWN;
-    private static final double FULL_WIDTH = 720;
-    private static final double MARGIN = 40;
-
+    private final SocketService socketService = SocketService.getInstance();
     private final int BOARD_SIZE;
-    private final double CELL_WIDTH;
-    private final double LINE_WIDTH;
-    private final double STONE_RADIUS;
     private final int MY_COLOR;
     private boolean myTurn;
-    private final SocketService socketService = SocketService.getInstance();
     private boolean gameFinished;
     private String lastPosition;
     private int lastColor;
     private String selectedPosition;
 
-    private Canvas gameBoard;
-    private GraphicsContext gc;
-    private Label lblInstruction;
+    private GameCanvas gameBoard;
+    private Label lblPrompt;
     private Label lblBlackScore;
     private Label lblWhiteScore;
     private TableView<Move> tblLog;
 
     public GameView(int boardSize, int color) {
         this.BOARD_SIZE = boardSize;
-        this.CELL_WIDTH = (FULL_WIDTH - 2 * MARGIN) / (BOARD_SIZE - 1);
-        this.LINE_WIDTH = 0.05 * CELL_WIDTH;
-        this.STONE_RADIUS = 0.45 * CELL_WIDTH;
         this.MY_COLOR = color;
         this.myTurn = color == 1;
         this.gameFinished = false;
@@ -56,27 +41,15 @@ public class GameView extends BorderPane {
     }
 
     private void setupGameBoard() {
-        gameBoard = new Canvas(FULL_WIDTH, FULL_WIDTH);
-        gc = gameBoard.getGraphicsContext2D();
+        gameBoard = new GameCanvas(BOARD_SIZE);
 
-        gc.setFill(BACKGROUND);
-        gc.fillRect(0, 0, FULL_WIDTH, FULL_WIDTH);
-
-        gc.setStroke(LINE_COLOR);
-        gc.setLineWidth(LINE_WIDTH);
-
-        for (int i = 0; i < BOARD_SIZE; i++) {
-            gc.strokeLine(MARGIN + i * CELL_WIDTH, MARGIN, MARGIN + i * CELL_WIDTH, FULL_WIDTH - MARGIN);
-            gc.strokeLine(MARGIN, MARGIN + i * CELL_WIDTH, FULL_WIDTH - MARGIN, MARGIN + i * CELL_WIDTH);
-        }
-
-        Button btnLeave = new Button("Leave game");
+        Button btnLeave = new Button("Leave");
         btnLeave.setOnAction(event -> requestQuitGame());
-        HBox quitBox = new HBox(btnLeave);
+        HBox leaveBox = new HBox(btnLeave);
 
-        lblInstruction = new Label("YOU ARE " + (MY_COLOR == 1 ? "BLACK" : "WHITE") + ". BLACK'S TURN");
-        lblInstruction.setMinHeight(50);
-        lblInstruction.setFont(Configs.primaryFont(20));
+        lblPrompt = new Label("YOU ARE " + (MY_COLOR == 1 ? "BLACK" : "WHITE") + ". BLACK'S TURN");
+        lblPrompt.setMinHeight(50);
+        lblPrompt.setFont(Configs.primaryFont(20));
         Button btnSubmitMove = new Button("Submit move");
         Button btnPass = new Button("Pass");
         Button btnResign = new Button("Resign");
@@ -88,12 +61,16 @@ public class GameView extends BorderPane {
             double x = event.getX();
             double y = event.getY();
 
+            final double MARGIN = GameCanvas.MARGIN;
+            final double FULL_WIDTH = GameCanvas.FULL_WIDTH;
+            final double CELL_WIDTH = (FULL_WIDTH - 2 * MARGIN) / (BOARD_SIZE - 1);
+
             if (x < MARGIN) x = MARGIN;
             if (x > FULL_WIDTH - MARGIN) x = FULL_WIDTH - MARGIN;
             if (y < MARGIN) y = MARGIN;
             if (y > FULL_WIDTH - MARGIN) y = FULL_WIDTH - MARGIN;
 
-            String position = coordinatesToString(x, y);
+            String position = gameBoard.coordinatesToString(x, y);
             if (position.equals(selectedPosition)) {
 //                removeStone(selectedPosition);
 //                selectedPosition = null;
@@ -107,17 +84,17 @@ public class GameView extends BorderPane {
 
             WritableImage writableImage = new WritableImage((int) gameBoard.getWidth(), (int) gameBoard.getHeight());
             gameBoard.snapshot(null, writableImage);
-            if (!writableImage.getPixelReader().getColor((int) x, (int) y).equals(LINE_COLOR)) {
+            if (!writableImage.getPixelReader().getColor((int) x, (int) y).equals(GameCanvas.LINE_COLOR)) {
                 return;
             }
 
             if (selectedPosition != null) {
-                removeStone(selectedPosition);
+                gameBoard.remove(selectedPosition);
             }
 
             selectedPosition = position;
 
-            putStone(selectedPosition, MY_COLOR, true, true);
+            gameBoard.drawStone(selectedPosition, MY_COLOR, false, true);
 
             btnSubmitMove.setDisable(false);
         });
@@ -138,13 +115,19 @@ public class GameView extends BorderPane {
                 return;
 
             if (selectedPosition != null)
-                removeStone(selectedPosition);
+                gameBoard.remove(selectedPosition);
+
+            if (lastPosition != null) {
+                gameBoard.drawStone(lastPosition, lastColor, false, false);
+                lastPosition = null;
+                lastColor = 0;
+            }
 
             socketService.send(new Message("MOVE", MY_COLOR + "\nPA\n"));
             myTurn = false;
             btnSubmitMove.setDisable(true);
             btnPass.setDisable(true);
-            lblInstruction.setText(MY_COLOR == 1 ? "BLACK PASSES. WHITE'S TURN" : "WHITE PASSES. BLACK'S TURN");
+            lblPrompt.setText(MY_COLOR == 1 ? "BLACK PASSES. WHITE'S TURN" : "WHITE PASSES. BLACK'S TURN");
 
             tblLog.getItems().add(new Move(MY_COLOR, "PA"));
             tblLog.scrollTo(tblLog.getItems().size() - 1);
@@ -159,13 +142,19 @@ public class GameView extends BorderPane {
                 return;
 
             if (selectedPosition != null)
-                removeStone(selectedPosition);
+                gameBoard.remove(selectedPosition);
+
+            if (lastPosition != null) {
+                gameBoard.drawStone(lastPosition, lastColor, false, false);
+                lastPosition = null;
+                lastColor = 0;
+            }
 
             socketService.send(new Message("INTRPT", MY_COLOR + "\nRESIGN\n"));
             myTurn = false;
             btnSubmitMove.setDisable(true);
             btnPass.setDisable(true);
-            lblInstruction.setText(MY_COLOR == 1 ? "BLACK RESIGNS. WHITE WINS!" : "WHITE RESIGNS. BLACK WINS!");
+            lblPrompt.setText(MY_COLOR == 1 ? "BLACK RESIGNS. WHITE WINS!" : "WHITE RESIGNS. BLACK WINS!");
 
             tblLog.getItems().add(new Move(MY_COLOR, "RS"));
             tblLog.scrollTo(tblLog.getItems().size() - 1);
@@ -175,16 +164,16 @@ public class GameView extends BorderPane {
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.setSpacing(20);
 
-        VBox container = new VBox(quitBox, lblInstruction, gameBoard, buttonBox);
-        container.setAlignment(Pos.CENTER);
+        VBox container = new VBox(leaveBox, lblPrompt, gameBoard, buttonBox);
+        container.setAlignment(Pos.TOP_CENTER);
         container.setSpacing(15);
 
         setLeft(container);
 
         socketService.on("MOVERR", message -> {
-            removeStone(selectedPosition);
+            gameBoard.remove(selectedPosition);
             selectedPosition = null;
-            lblInstruction.setText("INVALID MOVE!");
+            lblPrompt.setText("INVALID MOVE!");
         });
 
         socketService.on("MOVE", message -> {
@@ -201,7 +190,7 @@ public class GameView extends BorderPane {
                 if (params.length > 2) {
                     String[] captured = params[2].split(" ");
                     for (String cap : captured) {
-                        removeStone(cap);
+                        gameBoard.remove(cap);
                     }
                     if (color == 1) {
                         lblBlackScore.setText((Integer.parseInt(lblBlackScore.getText()) + captured.length) + "");
@@ -213,12 +202,17 @@ public class GameView extends BorderPane {
                 myTurn = !myTurn;
                 btnSubmitMove.setDisable(true);
                 btnPass.setDisable(!myTurn);
-                lblInstruction.setText(color == 1 ? "WHITE'S TURN" : "BLACK'S TURN");
+                lblPrompt.setText(color == 1 ? "WHITE'S TURN" : "BLACK'S TURN");
             } else {
+                if (lastPosition != null) {
+                    gameBoard.drawStone(lastPosition, lastColor, false, false);
+                    lastPosition = null;
+                    lastColor = 0;
+                }
                 myTurn = true;
                 btnSubmitMove.setDisable(false);
                 btnPass.setDisable(false);
-                lblInstruction.setText(color == 1 ? "BLACK PASSES. WHITE'S TURN" : "WHITE PASSES. BLACK'S TURN");
+                lblPrompt.setText(color == 1 ? "BLACK PASSES. WHITE'S TURN" : "WHITE PASSES. BLACK'S TURN");
             }
 
             selectedPosition = null;
@@ -232,13 +226,20 @@ public class GameView extends BorderPane {
                 btnSubmitMove.setDisable(true);
                 btnPass.setDisable(true);
                 btnResign.setDisable(true);
-                lblInstruction.setText(color == 1 ? "BLACK RESIGNS. WHITE WINS!" : "WHITE RESIGNS. BLACK WINS!");
+                lblPrompt.setText(color == 1 ? "BLACK RESIGNS. WHITE WINS!" : "WHITE RESIGNS. BLACK WINS!");
                 tblLog.getItems().add(new Move(MY_COLOR, "RS"));
                 tblLog.scrollTo(tblLog.getItems().size() - 1);
             }
         });
 
         socketService.on("RESULT", message -> {
+            System.out.println(lastPosition);
+            if (lastPosition != null) {
+                gameBoard.drawStone(lastPosition, lastColor, false, false);
+                lastPosition = null;
+                lastColor = 0;
+            }
+
             gameFinished = true;
             myTurn = false;
             btnSubmitMove.setDisable(true);
@@ -253,15 +254,16 @@ public class GameView extends BorderPane {
 
             if (params.length > 1 && params[1].length() > 1) {
                 String[] blackTerritory = params[1].split(" ");
-                for (String coords : blackTerritory) drawTerritory(coords, 1);
+                gameBoard.drawTerritory(1, blackTerritory);
             }
 
             if (params.length > 2 && params[2].length() > 1) {
                 String[] whiteTerritory = params[2].split(" ");
-                for (String coords : whiteTerritory) drawTerritory(coords, 2);
+                gameBoard.drawTerritory(2, whiteTerritory);
             }
 
-            lblInstruction.setText("BLACK %.1f : %.1f WHITE. ".formatted(blackScore, whiteScore) + winner + " WINS!");
+            if (blackScore >= 0 && whiteScore >= 0)
+                lblPrompt.setText("BLACK %.1f : %.1f WHITE. ".formatted(blackScore, whiteScore) + winner + " WINS!");
         });
     }
 
@@ -319,12 +321,17 @@ public class GameView extends BorderPane {
         tblLog.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         tblLog.getColumns().setAll(playerCol, coordsCol);
 
+        Label lblCaptured = new Label("CAPTURED");
+        lblCaptured.setFont(Configs.primaryFont(20));
+        Label lblLog = new Label("GAME LOG");
+        lblLog.setFont(Configs.primaryFont(20));
+
         VBox pane = new VBox();
         pane.setAlignment(Pos.CENTER);
         pane.setPadding(new Insets(0, 10, 0, 10));
         pane.setSpacing(20);
         pane.setMinWidth(500);
-        pane.getChildren().addAll(scorePane, tblLog);
+        pane.getChildren().addAll(lblCaptured, scorePane, lblLog, tblLog);
 
         setRight(pane);
     }
@@ -332,7 +339,7 @@ public class GameView extends BorderPane {
     public boolean requestQuitGame() {
         if (gameFinished) {
             socketService.send(new Message("RESACK", ""));
-            MainWindow.getInstance().setCenter(new HomeView());
+            MainWindow.getInstance().previous();
             return true;
         }
 
@@ -344,82 +351,18 @@ public class GameView extends BorderPane {
         if (answer.isPresent() && answer.get().equals(ButtonType.YES)) {
             socketService.send(new Message("INTRPT", MY_COLOR + "\nRESIGN\n"), 0, 10);
             socketService.send(new Message("RESACK", ""), 0, 10);
-            MainWindow.getInstance().setCenter(new HomeView());
+            MainWindow.getInstance().previous();
             return true;
         }
         return false;
     }
 
     private void play(String coords, int color) {
-        putStone(coords, color, true, false);
+        gameBoard.drawStone(coords, color, true, false);
         if (lastPosition != null)
-            putStone(lastPosition, lastColor, false, false);
+            gameBoard.drawStone(lastPosition, lastColor, false, false);
         lastPosition = coords;
         lastColor = color;
-    }
-
-    private void putStone(String coords, int color, boolean withMarker, boolean faded) {
-        Point2D coordinates = stringToCoordinates(coords);
-
-        double opacity = faded ? 0.5 : 1;
-        Color black = new Color(0, 0, 0, opacity);
-        Color white = new Color(1, 1, 1, opacity);
-
-        gc.setFill(color == 1 ? black : white);
-        gc.fillOval(coordinates.getX() - STONE_RADIUS, coordinates.getY() - STONE_RADIUS, 2 * STONE_RADIUS, 2 * STONE_RADIUS);
-
-        if (withMarker) {
-            gc.setStroke(color == 1 ? white : black);
-            gc.setLineWidth(3);
-            gc.strokeOval(coordinates.getX() - STONE_RADIUS / 2, coordinates.getY() - STONE_RADIUS / 2, STONE_RADIUS, STONE_RADIUS);
-        }
-    }
-
-    private void removeStone(String coords) {
-        Point2D coordinates = stringToCoordinates(coords);
-        double x = coordinates.getX();
-        double y = coordinates.getY();
-
-        gc.setFill(BACKGROUND);
-        gc.fillRect(x - STONE_RADIUS, y - STONE_RADIUS, 2 * STONE_RADIUS, 2 * STONE_RADIUS);
-
-        gc.setStroke(LINE_COLOR);
-        gc.setLineWidth(LINE_WIDTH);
-        if (x > MARGIN) gc.strokeLine(x - STONE_RADIUS, y, x, y);
-        if (x < FULL_WIDTH - MARGIN) gc.strokeLine(x, y, x + STONE_RADIUS, y);
-        if (y > MARGIN) gc.strokeLine(x, y - STONE_RADIUS, x, y);
-        if (y < FULL_WIDTH - MARGIN) gc.strokeLine(x, y, x, y + STONE_RADIUS);
-    }
-
-    private void drawTerritory(String coords, int color) {
-        Point2D coordinates = stringToCoordinates(coords);
-        double x = coordinates.getX();
-        double y = coordinates.getY();
-
-        gc.setFill(color == 1 ? Color.BLACK : Color.WHITE);
-        gc.fillRect(x - CELL_WIDTH / 10, y - CELL_WIDTH / 10, CELL_WIDTH / 5, CELL_WIDTH / 5);
-    }
-
-    private Point2D stringToCoordinates(String coords) {
-        int colChar = coords.charAt(0);
-        if (colChar >= 'J') colChar--;
-
-        int col = colChar - 'A';
-        int row = Integer.parseInt(coords.substring(1)) - 1;
-
-        double x = MARGIN + col * CELL_WIDTH;
-        double y = FULL_WIDTH - (MARGIN + row * CELL_WIDTH);
-        return new Point2D(x, y);
-    }
-
-    private String coordinatesToString(double x, double y) {
-        int col = (int) Math.round((x - MARGIN) / CELL_WIDTH);
-        int row = BOARD_SIZE - 1 - (int) Math.round((y - MARGIN) / CELL_WIDTH);
-
-        char colChar = (char) (col + 'A');
-        if (colChar >= 'I') colChar++;
-
-        return "" + colChar + (row + 1);
     }
 
     private class Move {

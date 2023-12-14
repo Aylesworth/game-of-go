@@ -14,6 +14,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.FontWeight;
 
 public class LoginView extends VBox {
     private SocketService socketService = SocketService.getInstance();
@@ -30,7 +31,7 @@ public class LoginView extends VBox {
         double fieldWidth = 200;
 
         lblTitle = new Label("LOGIN");
-        lblTitle.setFont(Configs.primaryFont(20));
+        lblTitle.setFont(Configs.primaryFont(FontWeight.BOLD, 24));
 
         lblUsername = new Label("Username");
         lblUsername.setFont(Configs.primaryFont(14));
@@ -58,7 +59,7 @@ public class LoginView extends VBox {
         lblSignUp.setTextFill(Color.BLUE);
         lblSignUp.setOnMouseEntered(event -> lblSignUp.setUnderline(true));
         lblSignUp.setOnMouseExited(event -> lblSignUp.setUnderline(false));
-        lblSignUp.setOnMouseClicked(event -> MainWindow.getInstance().setCenter(new RegisterView()));
+        lblSignUp.setOnMouseClicked(event -> MainWindow.getInstance().swap(new RegisterView()));
 
         setMaxWidth(300);
         setAlignment(Pos.CENTER);
@@ -86,7 +87,7 @@ public class LoginView extends VBox {
 
         socketService.on("OK", message -> {
             SessionStorage.setItem("username", txtUsername.getText());
-            MainWindow.getInstance().setCenter(new HomeView());
+            MainWindow.getInstance().swap(new HomeView());
         });
         socketService.on("ERROR", message -> lblMessage.setText(message.payload()));
     }

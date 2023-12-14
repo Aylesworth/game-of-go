@@ -10,6 +10,10 @@ public class Configs {
     public static final Color ERROR_COLOR = Color.PINK;
 
     public static Font primaryFont(double size) {
-        return Font.font("Avant Garde", size);
+        return primaryFont(FontWeight.NORMAL, size);
+    }
+
+    public static Font primaryFont(FontWeight fontWeight, double size) {
+        return Font.font("Avant Garde", fontWeight, size);
     }
 }

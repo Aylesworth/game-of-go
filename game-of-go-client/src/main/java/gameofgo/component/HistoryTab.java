@@ -1,8 +1,6 @@
 package gameofgo.component;
 
-import gameofgo.common.Configs;
-import gameofgo.common.Message;
-import gameofgo.common.SessionStorage;
+import gameofgo.common.*;
 import gameofgo.service.SocketService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -16,6 +14,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 
 import java.time.Instant;
@@ -37,7 +36,7 @@ public class HistoryTab extends Tab {
 
     private Node createContent() {
         Label lblTitle = new Label("HISTORY");
-        lblTitle.setFont(Configs.primaryFont(24));
+        lblTitle.setFont(Configs.primaryFont(FontWeight.BOLD, 24));
 
         VBox historyVBox = new VBox(20);
         historyVBox.setAlignment(Pos.CENTER);
@@ -72,16 +71,18 @@ public class HistoryTab extends Tab {
     }
 
     private Node createHistoryItem(GameRecord gameRecord) {
-        int playerColor = gameRecord.blackPlayer.equals(SessionStorage.getItem("username")) ? 1 : 2;
+        int playerColor = gameRecord.blackPlayer().equals(SessionStorage.getItem("username")) ? 1 : 2;
 
-        Label lblGameId = new Label('#' + gameRecord.id);
+        Label lblGameId = new Label('#' + gameRecord.id());
         lblGameId.setFont(Configs.primaryFont(13));
 
-        Label lblOpponent = new Label("vs. " + (playerColor == 1 ? gameRecord.whitePlayer : gameRecord.blackPlayer));
+        String opponent = playerColor == 1 ? gameRecord.whitePlayer() : gameRecord.blackPlayer();
+        opponent = opponent.startsWith("@") ? opponent.substring(1) : opponent;
+        Label lblOpponent = new Label("vs. " + opponent);
         lblOpponent.setFont(Configs.primaryFont(13));
 
         LocalDateTime time = LocalDateTime.ofInstant(
-                Instant.ofEpochSecond(gameRecord.time),
+                Instant.ofEpochSecond(gameRecord.time()),
                 ZoneId.systemDefault()
         );
         String formattedTime = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy").format(time);
@@ -96,7 +97,7 @@ public class HistoryTab extends Tab {
         Circle stoneSymbol = new Circle(circleSize, circleSize, circleSize);
         stoneSymbol.setFill(playerColor == 1 ? Color.BLACK : Color.WHITE);
 
-        Label lblBoardSize = new Label(gameRecord.boardSize + "x" + gameRecord.boardSize);
+        Label lblBoardSize = new Label(gameRecord.boardSize() + "x" + gameRecord.boardSize());
         lblBoardSize.setFont(Configs.primaryFont(12));
 
         VBox smallVBox = new VBox(5, stoneSymbol, lblBoardSize);
@@ -104,8 +105,8 @@ public class HistoryTab extends Tab {
 
         String result;
         Color resultTextFill;
-        if ((playerColor == 1 && gameRecord.blackScore > gameRecord.whiteScore)
-                || (playerColor == 2 && gameRecord.whiteScore > gameRecord.blackScore)) {
+        if ((playerColor == 1 && gameRecord.blackScore() > gameRecord.whiteScore())
+                || (playerColor == 2 && gameRecord.whiteScore() > gameRecord.blackScore())) {
             result = "VICTORY";
             resultTextFill = Color.BLUEVIOLET;
         } else {
@@ -119,7 +120,7 @@ public class HistoryTab extends Tab {
         lblResult.setMinWidth(100);
 
         Label lblScores = new Label("Black score: %.1f\nWhite score: %.1f"
-                .formatted(gameRecord.blackScore, gameRecord.whiteScore));
+                .formatted(gameRecord.blackScore(), gameRecord.whiteScore()));
         lblScores.setFont(Configs.primaryFont(13));
         lblScores.setTextAlignment(TextAlignment.LEFT);
 
@@ -135,17 +136,28 @@ public class HistoryTab extends Tab {
         mainVBox.setBackground(Background.fill(Color.BEIGE));
         mainVBox.setMaxWidth(720);
 
-        return mainVBox;
-    }
+        btnReplay.setOnAction(event -> {
+            socketService.on("REPLAY", message -> {
+                String[] params = message.payload().split("\n");
+                String log = params[0];
+                String blackTerritory = params[1];
+                String whiteTerritory = params[2];
 
-    private record GameRecord(
-            String id,
-            int boardSize,
-            String blackPlayer,
-            String whitePlayer,
-            double blackScore,
-            double whiteScore,
-            long time
-    ) {
+                GameReplay gameReplay = new GameReplay(
+                        gameRecord.boardSize(),
+                        playerColor,
+                        log,
+                        gameRecord.blackScore(),
+                        gameRecord.whiteScore(),
+                        blackTerritory.split(" "),
+                        whiteTerritory.split(" ")
+                );
+                MainWindow.getInstance().next(new ReplayView(gameReplay));
+            });
+
+            socketService.send(new Message("REPLAY", gameRecord.id() + '\n'));
+        });
+
+        return mainVBox;
     }
 }

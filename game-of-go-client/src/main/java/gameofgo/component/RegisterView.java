@@ -7,10 +7,10 @@ import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 
 public class RegisterView extends VBox {
@@ -31,7 +31,7 @@ public class RegisterView extends VBox {
         double fieldWidth = 200;
 
         lblTitle = new Label("REGISTER");
-        lblTitle.setFont(Configs.primaryFont(20));
+        lblTitle.setFont(Configs.primaryFont(FontWeight.BOLD, 24));
 
         lblUsername = new Label("Username");
         lblUsername.setFont(Configs.primaryFont(14));
@@ -70,7 +70,7 @@ public class RegisterView extends VBox {
         lblSignIn.setTextFill(Color.BLUE);
         lblSignIn.setOnMouseEntered(event -> lblSignIn.setUnderline(true));
         lblSignIn.setOnMouseExited(event -> lblSignIn.setUnderline(false));
-        lblSignIn.setOnMouseClicked(event -> MainWindow.getInstance().setCenter(new LoginView()));
+        lblSignIn.setOnMouseClicked(event -> MainWindow.getInstance().swap(new LoginView()));
 
         setMaxWidth(300);
         setAlignment(Pos.CENTER);
@@ -115,7 +115,7 @@ public class RegisterView extends VBox {
             alert.setHeaderText(message.payload());
             alert.showAndWait();
 
-            MainWindow.getInstance().setCenter(new LoginView());
+            MainWindow.getInstance().swap(new LoginView());
         });
 
         socketService.on("ERROR", message -> lblMessage.setText(message.payload()));

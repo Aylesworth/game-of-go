@@ -15,7 +15,7 @@
 
 using namespace std;
 
-#define BUFF_SIZE 1024
+#define BUFF_SIZE 2048
 
 int handleSend(int, const char *, const char *);
 
@@ -410,6 +410,7 @@ void *handleRequest(void *arg) {
                 sprintf(buff, "%.1f %.1f\n%s\n%s\n", game->getBlackScore(), game->getWhiteScore(),
                         game->getBlackTerritory().c_str(), game->getWhiteTerritory().c_str());
 
+                usleep(10000);
                 handleSend(clientSocket, "RESULT", buff);
                 if (opponentClient != NULL) {
                     handleSend(opponentClient->socket, "RESULT", buff);
@@ -440,6 +441,15 @@ void *handleRequest(void *arg) {
             }
             strcat(payload, "\0");
             handleSend(clientSocket, "HISTRY", payload);
+        }
+
+            // Get game replay
+        else if (strcmp(messageType, "REPLAY") == 0) {
+            char *id = strtok(payload, "\n");
+            GameReplay *replay = handleGetReplay(id);
+            const char *data = (replay->log + "\n" + replay->blackTerritory + " \n" + replay->whiteTerritory +
+                                " \n").c_str();
+            handleSend(clientSocket, "REPLAY", data);
         }
     }
 

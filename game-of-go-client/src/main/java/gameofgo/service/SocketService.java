@@ -3,11 +3,13 @@ package gameofgo.service;
 import gameofgo.common.Message;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.scene.control.Alert;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
+import java.net.NoRouteToHostException;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,7 +26,7 @@ public class SocketService {
 
     private static final String SERVER_ADDRESS = "192.168.43.4";
     private static final int SERVER_PORT = 8080;
-    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_SIZE = 2048;
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
@@ -43,6 +45,11 @@ public class SocketService {
             handlers = new HashMap<>();
 
             listen();
+        } catch (NoRouteToHostException e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setHeaderText("Cannot connect to server!");
+            alert.showAndWait();
+            System.exit(-1);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

@@ -87,4 +87,8 @@ vector<GameRecord *> handleGetHistory(int playerId) {
     return findGamesByPlayer(playerId);
 }
 
+GameReplay *handleGetReplay(string gameId) {
+    return getGameReplayInfo(gameId);
+}
+
 #endif //GAME_OF_GO_SERVER_SERVICE_HPP

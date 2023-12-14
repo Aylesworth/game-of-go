@@ -96,4 +96,20 @@ vector<GameRecord *> findGamesByPlayer(int playerId) {
     return games;
 }
 
+GameReplay *getGameReplayInfo(string gameId) {
+    auto pstmt = con->prepareStatement(
+            "SELECT log, black_territory, white_territory FROM game WHERE id = ?");
+    pstmt->setString(1, gameId);
+    auto rs = pstmt->executeQuery();
+
+    if (rs->next()) {
+        return new GameReplay(
+                rs->getString("log"),
+                rs->getString("black_territory"),
+                rs->getString("white_territory")
+        );
+    }
+    return NULL;
+}
+
 #endif
