@@ -84,17 +84,17 @@ public class ReplayView extends BorderPane {
         lblSpeed.setFont(Configs.primaryFont(13));
 
         ComboBox<String> cbSpeed = new ComboBox<>(FXCollections.observableArrayList(
-                "x0.25",
-                "x0.5",
-                "x1",
-                "x2",
-                "x3",
-                "x5",
-                "x10"
+                "0.25x",
+                "0.5x",
+                "1x",
+                "2x",
+                "3x",
+                "5x",
+                "10x"
         ));
         cbSpeed.getSelectionModel().select(2);
         cbSpeed.valueProperty().addListener(((observable, oldValue, newValue) -> {
-            speedMillis = (int) (1 / Double.parseDouble(newValue.substring(1)) * 1000);
+            speedMillis = (int) (1 / Double.parseDouble(newValue.substring(0, newValue.length() - 1)) * 1000);
         }));
 
         HBox speedBox = new HBox(10, lblSpeed, cbSpeed);

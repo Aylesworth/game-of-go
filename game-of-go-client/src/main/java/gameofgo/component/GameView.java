@@ -54,6 +54,10 @@ public class GameView extends BorderPane {
         Button btnPass = new Button("Pass");
         Button btnResign = new Button("Resign");
 
+        gameBoard.setOnMouseMoved(event -> {
+            System.out.println(event.getX() + " " + event.getY());
+        });
+
         gameBoard.setOnMouseClicked(event -> {
             if (!myTurn)
                 return;
@@ -233,7 +237,6 @@ public class GameView extends BorderPane {
         });
 
         socketService.on("RESULT", message -> {
-            System.out.println(lastPosition);
             if (lastPosition != null) {
                 gameBoard.drawStone(lastPosition, lastColor, false, false);
                 lastPosition = null;

@@ -87,7 +87,6 @@ public class PlayTab extends Tab {
         });
 
         socketService.on("SETUP", message -> {
-            socketService.removeListeners("LSTONL", "CHGONL", "INVITE", "INVRES", "SETUP");
             String[] params = message.payload().split("\n");
             int boardSize = Integer.parseInt(params[0]);
             int color = Integer.parseInt(params[1]);
@@ -105,6 +104,7 @@ public class PlayTab extends Tab {
 
         ComboBox<String> boardSizeComboBox = new ComboBox<>(FXCollections.observableArrayList("9x9", "13x13", "19x19"));
         boardSizeComboBox.setValue("19x19");
+        selectedBoardSize = 19;
         boardSizeComboBox.valueProperty().addListener(((observable, oldValue, newValue) -> {
             selectedBoardSize = Integer.parseInt(newValue.split("x")[0]);
         }));

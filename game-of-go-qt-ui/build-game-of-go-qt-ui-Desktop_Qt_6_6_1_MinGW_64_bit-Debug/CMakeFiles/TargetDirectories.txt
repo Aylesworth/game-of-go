@@ -1,0 +1,9 @@
+D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/CMakeFiles/game-of-go-qt-ui.dir
+D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/CMakeFiles/edit_cache.dir
+D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/CMakeFiles/rebuild_cache.dir
+D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/CMakeFiles/list_install_components.dir
+D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/CMakeFiles/install.dir
+D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/CMakeFiles/install/local.dir
+D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/CMakeFiles/install/strip.dir
+D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/CMakeFiles/game-of-go-qt-ui_autogen_timestamp_deps.dir
+D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/CMakeFiles/game-of-go-qt-ui_autogen.dir

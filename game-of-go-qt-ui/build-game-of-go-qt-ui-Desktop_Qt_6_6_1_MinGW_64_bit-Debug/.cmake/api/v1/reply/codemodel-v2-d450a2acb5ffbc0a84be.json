@@ -1,0 +1,79 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-ecf685010a785f66f31c.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "game-of-go-qt-ui",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "game-of-go-qt-ui::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-game-of-go-qt-ui-Debug-1e9a9dd092951c1397e2.json",
+					"name" : "game-of-go-qt-ui",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "game-of-go-qt-ui_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-game-of-go-qt-ui_autogen-Debug-57fd3b1859cded655ca5.json",
+					"name" : "game-of-go-qt-ui_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "game-of-go-qt-ui_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-game-of-go-qt-ui_autogen_timestamp_deps-Debug-1d54a0bf3b2e87055693.json",
+					"name" : "game-of-go-qt-ui_autogen_timestamp_deps",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug",
+		"source" : "D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/game-of-go-qt-ui"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 6
+	}
+}
