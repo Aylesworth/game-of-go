@@ -34,13 +34,10 @@ void GameBoardWidget::drawStone(int color, QString coords, bool withMarker) {
     QPoint point = coordsToPoint(coords);
     stone->setGeometry(point.x() - stoneRadius, point.y() - stoneRadius - 4 * eps, 2 * stoneRadius, 2 * stoneRadius);
     map[coords] = stone;
-    qDebug() << "Put " << coords;
 }
 
 void GameBoardWidget::removeStone(QString coords) {
-    qDebug() << "Remove " << coords;
     if (map.count(coords) > 0) {
-        qDebug() << map[coords]->x();
         map[coords]->hide();
         map.erase(coords);
     }

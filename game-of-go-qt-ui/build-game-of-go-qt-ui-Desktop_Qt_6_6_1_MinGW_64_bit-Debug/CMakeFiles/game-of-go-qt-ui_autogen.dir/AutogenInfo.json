@@ -269,6 +269,12 @@
 			null
 		],
 		[
+			"D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/game-of-go-qt-ui/socket.h",
+			"MU",
+			"EWIEGA46WW/moc_socket.cpp",
+			null
+		],
+		[
 			"D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/game-of-go-qt-ui/stonewidget.h",
 			"MU",
 			"EWIEGA46WW/moc_stonewidget.cpp",
@@ -362,6 +368,11 @@
 		],
 		[
 			"D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/game-of-go-qt-ui/mainwindow.cpp",
+			"MU",
+			null
+		],
+		[
+			"D:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/game-of-go-qt-ui/socket.cpp",
 			"MU",
 			null
 		],

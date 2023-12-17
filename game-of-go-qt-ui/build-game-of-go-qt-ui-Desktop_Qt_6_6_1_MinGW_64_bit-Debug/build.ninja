@@ -97,6 +97,14 @@ build CMakeFiles/game-of-go-qt-ui.dir/stonewidget.cpp.obj: CXX_COMPILER__game-of
   OBJECT_DIR = CMakeFiles\game-of-go-qt-ui.dir
   OBJECT_FILE_DIR = CMakeFiles\game-of-go-qt-ui.dir
 
+build CMakeFiles/game-of-go-qt-ui.dir/socket.cpp.obj: CXX_COMPILER__game-of-go-qt-ui_unscanned_Debug D$:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/game-of-go-qt-ui/socket.cpp || cmake_object_order_depends_target_game-of-go-qt-ui
+  DEFINES = -DMINGW_HAS_SECURE_API=1 -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NEEDS_QMAIN -DQT_WIDGETS_LIB -DUNICODE -DWIN32 -DWIN64 -D_ENABLE_EXTENDED_ALIGNED_STORAGE -D_UNICODE -D_WIN64
+  DEP_FILE = CMakeFiles\game-of-go-qt-ui.dir\socket.cpp.obj.d
+  FLAGS = -DQT_QML_DEBUG -g -std=gnu++17 -fdiagnostics-color=always
+  INCLUDES = -ID:/projects/network-programming-lab-it4062/project/game-of-go-qt-ui/build-game-of-go-qt-ui-Desktop_Qt_6_6_1_MinGW_64_bit-Debug/game-of-go-qt-ui_autogen/include -isystem D:/Qt/6.6.1/mingw_64/include/QtCore -isystem D:/Qt/6.6.1/mingw_64/include -isystem D:/Qt/6.6.1/mingw_64/mkspecs/win32-g++ -isystem D:/Qt/6.6.1/mingw_64/include/QtWidgets -isystem D:/Qt/6.6.1/mingw_64/include/QtGui
+  OBJECT_DIR = CMakeFiles\game-of-go-qt-ui.dir
+  OBJECT_FILE_DIR = CMakeFiles\game-of-go-qt-ui.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target game-of-go-qt-ui
@@ -105,7 +113,7 @@ build CMakeFiles/game-of-go-qt-ui.dir/stonewidget.cpp.obj: CXX_COMPILER__game-of
 #############################################
 # Link the executable game-of-go-qt-ui.exe
 
-build game-of-go-qt-ui.exe: CXX_EXECUTABLE_LINKER__game-of-go-qt-ui_Debug CMakeFiles/game-of-go-qt-ui.dir/game-of-go-qt-ui_autogen/mocs_compilation.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/main.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/mainwindow.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/loginwindow.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/gameboardwidget.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/stonewidget.cpp.obj | D$:/Qt/6.6.1/mingw_64/lib/libQt6Widgets.a D$:/Qt/6.6.1/mingw_64/lib/libQt6Gui.a D$:/Qt/6.6.1/mingw_64/lib/libQt6Core.a D$:/Qt/6.6.1/mingw_64/lib/libQt6EntryPoint.a || game-of-go-qt-ui_autogen game-of-go-qt-ui_autogen_timestamp_deps
+build game-of-go-qt-ui.exe: CXX_EXECUTABLE_LINKER__game-of-go-qt-ui_Debug CMakeFiles/game-of-go-qt-ui.dir/game-of-go-qt-ui_autogen/mocs_compilation.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/main.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/mainwindow.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/loginwindow.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/gameboardwidget.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/stonewidget.cpp.obj CMakeFiles/game-of-go-qt-ui.dir/socket.cpp.obj | D$:/Qt/6.6.1/mingw_64/lib/libQt6Widgets.a D$:/Qt/6.6.1/mingw_64/lib/libQt6Gui.a D$:/Qt/6.6.1/mingw_64/lib/libQt6Core.a D$:/Qt/6.6.1/mingw_64/lib/libQt6EntryPoint.a || game-of-go-qt-ui_autogen game-of-go-qt-ui_autogen_timestamp_deps
   FLAGS = -DQT_QML_DEBUG -g
   LINK_FLAGS = -mwindows
   LINK_LIBRARIES = D:/Qt/6.6.1/mingw_64/lib/libQt6Widgets.a  D:/Qt/6.6.1/mingw_64/lib/libQt6Gui.a  D:/Qt/6.6.1/mingw_64/lib/libQt6Core.a  -lmpr  -luserenv  -lmingw32  D:/Qt/6.6.1/mingw_64/lib/libQt6EntryPoint.a  -lshell32  -ld3d11  -ldxgi  -ldxguid  -ld3d12  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32

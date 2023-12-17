@@ -24,7 +24,7 @@ public class SocketService {
         return instance;
     }
 
-    private static final String SERVER_ADDRESS = "192.168.43.4";
+    private static final String SERVER_ADDRESS = "localhost";
     private static final int SERVER_PORT = 8080;
     private static final int BUFFER_SIZE = 2048;
     private Socket socket;

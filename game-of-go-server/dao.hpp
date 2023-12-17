@@ -20,7 +20,7 @@ sql::Connection *getConnection() {
     sql::Connection *con;
 
     driver = sql::mysql::get_mysql_driver_instance();
-    con = driver->connect("tcp://localhost:3306", "nda2105", "Ducanh2003@");
+    con = driver->connect("tcp://localhost:3306", "nda2105", "ducanh2003");
     con->setSchema("game_of_go");
 
     return con;
