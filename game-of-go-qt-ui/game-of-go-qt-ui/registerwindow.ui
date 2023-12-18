@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>LoginWindow</class>
- <widget class="QMainWindow" name="LoginWindow">
+ <class>RegisterWindow</class>
+ <widget class="QMainWindow" name="RegisterWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -10,32 +10,37 @@
     <height>400</height>
    </rect>
   </property>
-  <property name="tabletTracking">
-   <bool>false</bool>
-  </property>
-  <property name="focusPolicy">
-   <enum>Qt::NoFocus</enum>
-  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLabel" name="lbl_title">
+   <widget class="QPushButton" name="btn_register">
     <property name="geometry">
      <rect>
       <x>160</x>
-      <y>60</y>
+      <y>270</y>
       <width>81</width>
-      <height>41</height>
+      <height>31</height>
      </rect>
     </property>
-    <property name="font">
-     <font>
-      <pointsize>18</pointsize>
-     </font>
+    <property name="text">
+     <string>Register</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lbl_error">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>240</y>
+      <width>221</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">color: darkred;</string>
     </property>
     <property name="text">
-     <string>LOGIN</string>
+     <string/>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
@@ -44,10 +49,10 @@
    <widget class="QWidget" name="formLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>90</x>
-      <y>140</y>
-      <width>221</width>
-      <height>71</height>
+      <x>60</x>
+      <y>110</y>
+      <width>281</width>
+      <height>121</height>
      </rect>
     </property>
     <layout class="QFormLayout" name="formLayout">
@@ -81,48 +86,48 @@
      <item row="0" column="1">
       <widget class="QLineEdit" name="txt_username"/>
      </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Confirm Password</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="txt_confirm_password">
+       <property name="echoMode">
+        <enum>QLineEdit::Password</enum>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
-   <widget class="QPushButton" name="btn_login">
+   <widget class="QLabel" name="lbl_title">
     <property name="geometry">
      <rect>
-      <x>160</x>
-      <y>250</y>
-      <width>81</width>
-      <height>31</height>
+      <x>100</x>
+      <y>43</y>
+      <width>201</width>
+      <height>41</height>
      </rect>
     </property>
-    <property name="text">
-     <string>Login</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="lbl_error">
-    <property name="geometry">
-     <rect>
-      <x>90</x>
-      <y>220</y>
-      <width>221</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">color: darkred;</string>
+    <property name="font">
+     <font>
+      <pointsize>18</pointsize>
+     </font>
     </property>
     <property name="text">
-     <string/>
-    </property>
-    <property name="textFormat">
-     <enum>Qt::AutoText</enum>
+     <string>REGISTER</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
-   <widget class="QLabel" name="lbl_register">
+   <widget class="QLabel" name="lbl_login">
     <property name="geometry">
      <rect>
-      <x>100</x>
-      <y>300</y>
+      <x>96</x>
+      <y>320</y>
       <width>201</width>
       <height>20</height>
      </rect>
@@ -136,19 +141,13 @@
      <cursorShape>PointingHandCursor</cursorShape>
     </property>
     <property name="mouseTracking">
-     <bool>false</bool>
-    </property>
-    <property name="tabletTracking">
      <bool>true</bool>
-    </property>
-    <property name="focusPolicy">
-     <enum>Qt::NoFocus</enum>
     </property>
     <property name="styleSheet">
      <string notr="true">color: blue;</string>
     </property>
     <property name="text">
-     <string>&lt;a href=&quot;#&quot;&gt;Do not have account? Register&lt;/a&gt;</string>
+     <string>&lt;a href=&quot;#&quot;&gt;Already have account? Login&lt;/a&gt;</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
@@ -170,10 +169,8 @@
  <tabstops>
   <tabstop>txt_username</tabstop>
   <tabstop>txt_password</tabstop>
-  <tabstop>btn_login</tabstop>
-  <tabstop>lbl_register</tabstop>
-  <tabstop>txt_username</tabstop>
-  <tabstop>txt_password</tabstop>
+  <tabstop>txt_confirm_password</tabstop>
+  <tabstop>btn_register</tabstop>
  </tabstops>
  <resources/>
  <connections/>

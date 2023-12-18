@@ -27,6 +27,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         gameboardwidget.h gameboardwidget.cpp gameboardwidget.ui
         stonewidget.h stonewidget.cpp stonewidget.ui
         socket.h socket.cpp
+        registerwindow.h registerwindow.cpp registerwindow.ui
 
 
     )

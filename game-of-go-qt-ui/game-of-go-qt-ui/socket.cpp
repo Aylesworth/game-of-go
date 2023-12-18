@@ -48,7 +48,7 @@ Socket::Socket(QString serverAddress, int serverPort) {
 }
 
 Socket::~Socket() {
-    delete this;
+
 }
 
 void Socket::sendMessage(QString msgtype, QString payload) {
@@ -91,6 +91,7 @@ void Socket::runReceiveThread() {
     QString header, payload, msgtype, blocktype, fullpayload;
     int payloadlen;
     while (1) {
+        fullpayload = "";
         do {
             n_received = recv(sockfd, buff, BUFF_SIZE - 1, 0);
             if (n_received <= 0) {

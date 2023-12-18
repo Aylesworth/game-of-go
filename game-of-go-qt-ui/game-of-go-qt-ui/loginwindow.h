@@ -16,9 +16,10 @@ public:
     explicit LoginWindow(QWidget *parent = nullptr);
     ~LoginWindow();
 
-public slots:
+private slots:
     void submit();
     void onMessageReceived(QString msgtype, QString payload);
+    void on_lbl_register_linkActivated(const QString &link);
 
 private:
     Ui::LoginWindow *ui;
