@@ -2,13 +2,19 @@
 #define SOCKET_H
 
 #include <QObject>
-#include <QString>
 
 #define BUFF_SIZE 2048
 
 class Socket : public QObject
 {
     Q_OBJECT
+private:
+    static Socket *instance;
+    static QString serverAddress;
+    static int serverPort;
+public:
+    static Socket *getInstance();
+    static void setServer(QString serverAddress, int serverPort);
 private:
     int sockfd;
 public:

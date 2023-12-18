@@ -2,6 +2,7 @@
 #define LOGINWINDOW_H
 
 #include <QMainWindow>
+#include "socket.h"
 
 namespace Ui {
 class LoginWindow;
@@ -15,11 +16,13 @@ public:
     explicit LoginWindow(QWidget *parent = nullptr);
     ~LoginWindow();
 
-private slots:
-    void on_btn_login_clicked();
+public slots:
+    void submit();
+    void onMessageReceived(QString msgtype, QString payload);
 
 private:
     Ui::LoginWindow *ui;
+    Socket *socket;
 };
 
 #endif // LOGINWINDOW_H

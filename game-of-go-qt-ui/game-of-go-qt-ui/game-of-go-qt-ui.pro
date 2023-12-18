@@ -17,7 +17,6 @@ QT += gui widgets
 # Input
 HEADERS += gameboardwidget.h loginwindow.h mainwindow.h stonewidget.h socket.h
 FORMS += gameboardwidget.ui \
-         loginwidget.ui \
          loginwindow.ui \
          mainwindow.ui \
          stonewidget.ui

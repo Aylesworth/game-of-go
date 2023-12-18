@@ -12,6 +12,19 @@
 #include <QString>
 #include <QStringList>
 
+QString Socket::serverAddress = "127.0.0.1";
+int Socket::serverPort = 8080;
+
+Socket *Socket::instance = new Socket(serverAddress, serverPort);
+
+Socket *Socket::getInstance() {
+    return instance;
+}
+
+void Socket::setServer(QString serverAddress, int serverPort) {
+    instance = new Socket(serverAddress, serverPort);
+}
+
 Socket::Socket(QString serverAddress, int serverPort) {
     struct sockaddr_in server_addr;
 
@@ -69,6 +82,7 @@ void Socket::runReceiveThread() {
 }
 
 void *Socket::runReceiveThreadWrapper(void *context) {
+    pthread_detach(pthread_self());
     reinterpret_cast<Socket *>(context)->runReceiveThread();
     return NULL;
 }
