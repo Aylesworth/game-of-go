@@ -53,8 +53,32 @@ Socket::~Socket() {
 
 void Socket::sendMessage(QString msgtype, QString payload) {
     char buff[BUFF_SIZE];
-    sprintf(buff, "%s L %d\n%s\n", msgtype.toUtf8().constData(), payload.size(), payload.toUtf8().constData());
-    int n_sent = send(sockfd, buff, strlen(buff), 0);
+    int n_sent;
+    int blocktype_size = 1;
+    int payloadlen_size = 4;
+    int header_size = msgtype.size() + blocktype_size + payloadlen_size;
+
+    while (header_size + payload.size() > BUFF_SIZE - 1) {
+        QString payloadseg = payload.mid(0, BUFF_SIZE - 1 - header_size);
+        memset(buff, 0, BUFF_SIZE);
+        sprintf(buff, "%s %s %d\n%s",
+                msgtype.toStdString().c_str(),
+                "M", BUFF_SIZE - 1 - header_size,
+                payloadseg.toStdString().c_str());
+        n_sent = send(sockfd, buff, strlen(buff), 0);
+        if (n_sent < 0) {
+            perror("Error");
+            exit(EXIT_FAILURE);
+        }
+        payload = payload.mid(0, BUFF_SIZE - 1 - header_size);
+    }
+
+    memset(buff, 0, BUFF_SIZE);
+    sprintf(buff, "%s %s %d\n%s",
+            msgtype.toStdString().c_str(),
+            "L", payload.size(),
+            payload.toStdString().c_str());
+    n_sent = send(sockfd, buff, strlen(buff), 0);
     if (n_sent < 0) {
         perror("Error");
         exit(EXIT_FAILURE);
@@ -64,20 +88,32 @@ void Socket::sendMessage(QString msgtype, QString payload) {
 void Socket::runReceiveThread() {
     char buff[BUFF_SIZE];
     int n_received;
-    while ((n_received = recv(sockfd, buff, BUFF_SIZE - 1, 0)) > 0) {
-        buff[n_received] = '\0';
-        int split_idx = strcspn(buff, "\n");
-        buff[split_idx] = '\0';
+    QString header, payload, msgtype, blocktype, fullpayload;
+    int payloadlen;
+    while (1) {
+        do {
+            n_received = recv(sockfd, buff, BUFF_SIZE - 1, 0);
+            if (n_received <= 0) {
+                printf("Server closed\n");
+                return;
+            }
+            buff[n_received] = '\0';
+            printf("Received:\n%s\n", buff);
 
-        QString header(buff);
-        QString payload(buff + split_idx + 1);
+            int split_idx = strcspn(buff, "\n");
+            buff[split_idx] = '\0';
 
-        QStringList headerFields = header.split(' ');
-        QString msgtype = headerFields[0];
+            header = QString(buff);
+            payload = QString(buff + split_idx + 1);
 
-        emit messageReceived(msgtype, payload);
+            QStringList headerFields = header.split(' ');
+            msgtype = headerFields[0];
+            blocktype = headerFields[1];
+            payloadlen = headerFields[2].toInt();
+            fullpayload += payload;
+        } while (blocktype != "L");
 
-        printf("Received:\n%s\n%s\n", msgtype.toUtf8().constData(), payload.toUtf8().constData());
+        emit messageReceived(msgtype, fullpayload);
     }
 }
 
