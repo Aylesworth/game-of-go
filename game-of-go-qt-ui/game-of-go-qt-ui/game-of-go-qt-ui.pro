@@ -15,16 +15,22 @@ QT += gui widgets
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 # Input
-HEADERS += gameboardwidget.h loginwindow.h registerwindow.h mainwindow.h stonewidget.h socket.h
+HEADERS += gameboardwidget.h loginwindow.h registerwindow.h mainwindow.h stonewidget.h socket.h gamewidget.h menuwidget.h playwidget.h
 FORMS += gameboardwidget.ui \
          loginwindow.ui \
          registerwindow.ui \
          mainwindow.ui \
-         stonewidget.ui
+         stonewidget.ui \
+         gamewidget.ui \
+         menuwidget.ui \
+         playwidget.ui
 SOURCES += gameboardwidget.cpp \
            loginwindow.cpp \
            registerwindow.cpp \
            main.cpp \
            mainwindow.cpp \
            stonewidget.cpp \
-           socket.cpp
+           socket.cpp \
+           gamewidget.cpp \
+           menuwidget.cpp \
+           playwidget.cpp

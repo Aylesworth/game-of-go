@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>GameWidget</class>
+ <widget class="QWidget" name="GameWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>880</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <widget class="QWidget" name="verticalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>39</x>
+     <y>19</y>
+     <width>861</width>
+     <height>821</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="leftVBox"/>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
