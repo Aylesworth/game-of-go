@@ -219,6 +219,8 @@ void *handleRequest(void *arg) {
             char content[BUFF_SIZE];
 
             for (const auto &client: clients) {
+                if (client->account->username == thisClient->account->username) continue;
+
                 char status[20];
                 if (client->status == 0) {
                     strcpy(status, "Available");

@@ -20,7 +20,7 @@ private:
 public:
     Socket(QString serverAddress, int serverPort);
     ~Socket();
-    void sendMessage(QString msgtype, QString payload);
+    void sendMessage(QString msgtype, QString payload = "");
 private:
     static void *runReceiveThreadWrapper(void *context);
     void runReceiveThread();

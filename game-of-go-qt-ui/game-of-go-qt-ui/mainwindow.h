@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "socket.h"
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
@@ -19,5 +20,9 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    Socket *socket;
+
+private slots:
+    void onMessageReceived(QString msgtype, QString payload);
 };
 #endif // MAINWINDOW_H

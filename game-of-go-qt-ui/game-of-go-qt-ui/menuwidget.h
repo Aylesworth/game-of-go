@@ -15,6 +15,9 @@ public:
     explicit MenuWidget(QWidget *parent = nullptr);
     ~MenuWidget();
 
+private slots:
+    void on_btn_play_clicked();
+
 private:
     Ui::MenuWidget *ui;
 };
