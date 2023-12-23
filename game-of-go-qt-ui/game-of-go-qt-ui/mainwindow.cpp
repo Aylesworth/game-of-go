@@ -3,6 +3,8 @@
 #include "gamewidget.h"
 #include "menuwidget.h"
 #include "playwidget.h"
+#include "scoreboardwidget.h"
+#include "logtablewidget.h"
 #include "socket.h"
 
 #include <QMessageBox>
@@ -12,9 +14,9 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    setCentralWidget(new PlayWidget(this));
     socket = Socket::getInstance();
     connect(socket, &Socket::messageReceived, this, &MainWindow::onMessageReceived);
+    setCentralWidget(new GameWidget(19, 1, this));
 }
 
 MainWindow::~MainWindow()
@@ -37,13 +39,23 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
         } else {
             socket->sendMessage("INVRES", payload + "DECLINE\n");
         }
+        return;
     }
 
     if (msgtype == "INVRES") {
         QStringList params = payload.split("\n", Qt::SkipEmptyParts);
         QString username = params[0];
         int boardSize = params[1].toInt();
-        QString reply = params[2] == "ACCEPT" ? "accepted" : "declined";
-        QMessageBox::information(this, "Message", "Player " + username + " " + reply + " your challenge");
+        QString reply = params[2];
+        if (reply == "DECLINE")
+            QMessageBox::information(this, "Message", "Player " + username + " declined your challenge");
+        return;
+    }
+
+    if (msgtype == "SETUP") {
+        QStringList params = payload.split("\n", Qt::SkipEmptyParts);
+        int boardSize = params[0].toInt();
+        int color = params[1].toInt();
+        setCentralWidget(new GameWidget(boardSize, color, this));
     }
 }

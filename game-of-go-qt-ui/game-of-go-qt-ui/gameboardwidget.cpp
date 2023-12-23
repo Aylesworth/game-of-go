@@ -14,19 +14,33 @@ GameBoardWidget::GameBoardWidget(int boardSize, QWidget *parent)
     cellWidth = (fullWidth - 2 * margin) / (boardSize - 1);
     lineWidth = 0.05 * cellWidth;
     stoneRadius = 0.45 * cellWidth;
-
-    // StoneWidget *stone = new StoneWidget(2, stoneRadius, 1, 1, this);
-    // stone->setGeometry(margin-stoneRadius, margin-stoneRadius, 2 * stoneRadius, 2 * stoneRadius);
-
-    drawStone(1, "A13", 1);
-    drawStone(2, "H8", 0);
-    // removeStone("A13");
-    // removeStone("H8");
 }
 
 GameBoardWidget::~GameBoardWidget()
 {
     delete ui;
+}
+
+void GameBoardWidget::paintEvent(QPaintEvent *event) {
+    Q_UNUSED(event);
+
+    // Create a QPainter object
+    QPainter painter(this);
+
+    painter.setBrush(backgroundColor);
+    painter.drawRect(0, 0, fullWidth, fullWidth);
+
+    QPen pen;
+    pen.setWidth(lineWidth);
+    pen.setColor(lineColor);
+    painter.setPen(pen);
+    for (int i = 0; i < boardSize; i++) {
+        int offset = margin + i * cellWidth;
+        if (boardSize > 11) offset += i * (boardSize - 10) * 0.04;
+        int eps = 2 * lineWidth * 0;
+        painter.drawLine(offset, margin, offset, fullWidth - margin - eps);
+        painter.drawLine(margin, offset, fullWidth - margin - eps, offset);
+    }
 }
 
 void GameBoardWidget::drawStone(int color, QString coords, bool withMarker) {

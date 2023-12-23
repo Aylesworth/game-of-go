@@ -2,6 +2,7 @@
 #include "ui_challengewindow.h"
 #include "socket.h"
 #include "playwidget.h"
+#include "mainwindow.h"
 
 ChallengeWindow::ChallengeWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -11,6 +12,7 @@ ChallengeWindow::ChallengeWindow(QWidget *parent)
     socket = Socket::getInstance();
     connect(socket, &Socket::messageReceived, this, &ChallengeWindow::onMessageReceived);
     connect(ui->list_online, &QListWidget::currentTextChanged, this, &ChallengeWindow::onPlayerChanged);
+    connect(static_cast<MainWindow *>(parentWidget()->parentWidget()), &MainWindow::closeChildWindows, this, &ChallengeWindow::hide);
     ui->btn_challenge->setDisabled(true);
     socket->sendMessage("LSTONL");
 }
@@ -51,7 +53,7 @@ void ChallengeWindow::on_btn_challenge_clicked()
 {
     QString username = ui->list_online->currentItem()->text();
     username = username.mid(0, username.indexOf('(')).trimmed();
-    QString boardSize = QString::number(static_cast<PlayWidget *>(parent())->getSelectedBoardSize());
+    QString boardSize = QString::number(static_cast<PlayWidget *>(parentWidget())->getSelectedBoardSize());
     socket->sendMessage("INVITE", username + "\n" + boardSize + "\n");
 }
 

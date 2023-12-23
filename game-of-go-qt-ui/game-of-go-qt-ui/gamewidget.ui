@@ -17,12 +17,77 @@
    <property name="geometry">
     <rect>
      <x>39</x>
-     <y>19</y>
-     <width>861</width>
-     <height>821</height>
+     <y>79</y>
+     <width>791</width>
+     <height>711</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="leftVBox"/>
+  </widget>
+  <widget class="QPushButton" name="btn_pass">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>810</y>
+     <width>151</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Pass</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="btn_resign">
+   <property name="geometry">
+    <rect>
+     <x>480</x>
+     <y>810</y>
+     <width>151</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Resign</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="btn_leave">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>20</y>
+     <width>151</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Leave</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="verticalLayoutWidget_2">
+   <property name="geometry">
+    <rect>
+     <x>860</x>
+     <y>80</y>
+     <width>321</width>
+     <height>711</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="rightVBox"/>
   </widget>
  </widget>
  <resources/>

@@ -22,6 +22,9 @@ private:
     Ui::MainWindow *ui;
     Socket *socket;
 
+signals:
+    void closeChildWindows();
+
 private slots:
     void onMessageReceived(QString msgtype, QString payload);
 };

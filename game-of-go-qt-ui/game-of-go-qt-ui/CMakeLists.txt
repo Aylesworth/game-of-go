@@ -32,6 +32,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         menuwidget.h menuwidget.cpp menuwidget.ui
         playwidget.h playwidget.cpp playwidget.ui
         challengewindow.h challengewindow.cpp challengewindow.ui
+        scoreboardwidget.h scoreboardwidget.cpp scoreboardwidget.ui
+        logtablewidget.h logtablewidget.cpp logtablewidget.ui
+
 
 
     )
