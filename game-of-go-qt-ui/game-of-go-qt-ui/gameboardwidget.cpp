@@ -2,10 +2,14 @@
 #include "ui_gameboardwidget.h"
 #include <cmath>
 
-GameBoardWidget::GameBoardWidget(int boardSize, QWidget *parent)
+#include <QMouseEvent>
+#include <QDebug>
+
+GameBoardWidget::GameBoardWidget(int boardSize, int color, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::GameBoardWidget)
     , boardSize(boardSize)
+    , playerColor(color)
 {
     ui->setupUi(this);
     setFixedWidth(fullWidth);
@@ -14,6 +18,12 @@ GameBoardWidget::GameBoardWidget(int boardSize, QWidget *parent)
     cellWidth = (fullWidth - 2 * margin) / (boardSize - 1);
     lineWidth = 0.05 * cellWidth;
     stoneRadius = 0.45 * cellWidth;
+    shadowDisabled = color == 0;
+
+    if (color > 0) {
+        shadow = new StoneWidget(color, stoneRadius, 0, 0.5, this);
+        shadow->hide();
+    }
 }
 
 GameBoardWidget::~GameBoardWidget()
@@ -43,23 +53,88 @@ void GameBoardWidget::paintEvent(QPaintEvent *event) {
     }
 }
 
-void GameBoardWidget::drawStone(int color, QString coords, bool withMarker) {
-    StoneWidget *stone = new StoneWidget(color, stoneRadius, withMarker, 1, this);
-    QPoint point = coordsToPoint(coords);
-    stone->setGeometry(point.x() - stoneRadius, point.y() - stoneRadius - 4 * eps, 2 * stoneRadius, 2 * stoneRadius);
-    map[coords] = stone;
+void GameBoardWidget::mouseMoveEvent(QMouseEvent *event) {
+    if (playerColor == 0 || shadowDisabled) return;
+    moveStoneShadow(pointToCoords(QPoint(event->pos().x(), event->pos().y())));
 }
 
-void GameBoardWidget::removeStone(QString coords) {
-    if (map.count(coords) > 0) {
-        map[coords]->hide();
-        map.erase(coords);
+void GameBoardWidget::mousePressEvent(QMouseEvent *event) {
+    if (playerColor == 0) return;
+    QString coords = pointToCoords(QPoint(event->pos().x(), event->pos().y()));
+    if (stoneMap[coords] != nullptr) return;
+    emit click(coords);
+}
+
+void GameBoardWidget::leaveEvent(QEvent *event) {
+    setStoneShadowVisible(false);
+}
+
+void GameBoardWidget::drawStone(int color, QString coords, bool withMarker) {
+    if (stoneMap[coords] != nullptr) {
+        stoneMap[coords]->hide();
+        stoneMap.erase(coords);
+    }
+    StoneWidget *stone = new StoneWidget(color, stoneRadius, withMarker, 1, this);
+    QPoint point = coordsToPoint(coords);
+    stone->setGeometry(point.x() - stoneRadius, point.y() - stoneRadius, 2 * stoneRadius, 2 * stoneRadius);
+    stone->show();
+    stoneMap[coords] = stone;
+    update();
+}
+
+void GameBoardWidget::removeStones(QStringList coordsList) {
+    for (QString coords: coordsList) {
+        if (stoneMap[coords] != nullptr) {
+            stoneMap[coords]->hide();
+            stoneMap.erase(coords);
+        }
+    }
+    update();
+}
+
+void GameBoardWidget::moveStoneShadow(QString coords) {
+    if (stoneMap[coords] != nullptr) return;
+    QPoint point = coordsToPoint(coords);
+    shadow->setGeometry(point.x() - stoneRadius, point.y() - stoneRadius, 2 * stoneRadius, 2 * stoneRadius);
+    shadow->show();
+    update();
+}
+
+void GameBoardWidget::setStoneShadowVisible(bool visible) {
+    if (visible) shadow->show();
+    else shadow->hide();
+    update();
+}
+
+void GameBoardWidget::setStoneShadowDisabled(bool disabled) {
+    shadowDisabled = disabled;
+    if (disabled) {
+        shadow->hide();
     }
 }
 
+void GameBoardWidget::drawTerritory(int color, QStringList coordsList) {
+    int width = cellWidth / 5;
+    for (QString coords: coordsList) {
+        TerritoryWidget *territory = new TerritoryWidget(color, width, this);
+        QPoint point = coordsToPoint(coords);
+        territory->setGeometry(point.x() - width / 2, point.y() - width / 2, width, width);
+        territory->show();
+        territoryMap[coords] = territory;
+    }
+    update();
+}
+
 QString GameBoardWidget::pointToCoords(QPoint point) {
-    int col = (int) round((point.x() - margin) / cellWidth);
-    int row = boardSize - 1 - (int) round(point.y() - margin / cellWidth);
+    int x = point.x();
+    int y = point.y();
+    if (x < margin) x = margin;
+    if (x > fullWidth - margin) x = fullWidth - margin;
+    if (y < margin) y = margin;
+    if (y > fullWidth - margin) y = fullWidth - margin;
+
+    int col = (int) round(static_cast<double>(x - margin) / cellWidth);
+    int row = boardSize - 1 - (int) round(static_cast<double>(y - margin) / cellWidth);
 
     char colChar = (char) (col + 'A');
     if (colChar >= 'I') colChar++;
@@ -76,5 +151,6 @@ QPoint GameBoardWidget::coordsToPoint(QString coords) {
 
     double x = margin + col * cellWidth;
     double y = fullWidth - (margin + row * cellWidth);
+
     return QPoint(x, y);
 }

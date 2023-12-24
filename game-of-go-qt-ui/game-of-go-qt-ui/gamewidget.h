@@ -4,6 +4,7 @@
 #include "gameboardwidget.h"
 #include "scoreboardwidget.h"
 #include "logtablewidget.h"
+#include "socket.h"
 
 #include <QWidget>
 
@@ -19,13 +20,25 @@ public:
     explicit GameWidget(int boardSize, int myColor, QWidget *parent = nullptr);
     ~GameWidget();
 
+private slots:
+    void onMessageReceived(QString msgtype, QString payload);
+    void onGameBoardClicked(QString coords);
+
+    void on_btn_pass_clicked();
+
+    void on_btn_resign_clicked();
+
 private:
     Ui::GameWidget *ui;
+    Socket *socket;
     GameBoardWidget *gameBoard;
     ScoreboardWidget *scoreboard;
     LogTableWidget *logTable;
     int myColor;
     bool myTurn;
+    bool gameFinished;
+    QString lastCoords;
+    int lastColor;
 };
 
 #endif // GAMEWIDGET_H

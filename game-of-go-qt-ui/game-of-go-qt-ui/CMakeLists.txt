@@ -34,6 +34,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         challengewindow.h challengewindow.cpp challengewindow.ui
         scoreboardwidget.h scoreboardwidget.cpp scoreboardwidget.ui
         logtablewidget.h logtablewidget.cpp logtablewidget.ui
+        territorywidget.h territorywidget.cpp territorywidget.ui
 
 
 

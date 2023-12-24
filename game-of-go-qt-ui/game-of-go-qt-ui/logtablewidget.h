@@ -15,7 +15,7 @@ class LogTableWidget : public QWidget
 public:
     explicit LogTableWidget(QWidget *parent = nullptr);
     ~LogTableWidget();
-    void addRow(QString player, QString move);
+    void addRow(int color, QString coords);
     void removeLastRow();
 
 private:

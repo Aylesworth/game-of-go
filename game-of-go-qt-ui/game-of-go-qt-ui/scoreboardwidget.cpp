@@ -21,6 +21,9 @@ ScoreboardWidget::ScoreboardWidget(QWidget *parent)
     ui->tableView->verticalHeader()->setDefaultSectionSize(rowHeight);
     ui->tableView->verticalHeader()->setVisible(false);
     ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    setBlackScore(0);
+    setWhiteScore(0);
 }
 
 ScoreboardWidget::~ScoreboardWidget()

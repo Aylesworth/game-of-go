@@ -23,8 +23,12 @@ LogTableWidget::~LogTableWidget()
     delete ui;
 }
 
-void LogTableWidget::addRow(QString player, QString move) {
+void LogTableWidget::addRow(int color, QString coords) {
+    QString player = color == 1 ? "BLACK" : "WHITE";
+    QString move = coords == "PA" ? "passes" : coords == "RS" ? "resigns" : "plays " + coords;
+
     model->appendRow({new QStandardItem(player), new QStandardItem(move)});
+    ui->tableView->scrollToBottom();
 }
 
 void LogTableWidget::removeLastRow() {

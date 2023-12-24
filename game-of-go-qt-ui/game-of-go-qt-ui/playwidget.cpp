@@ -8,8 +8,8 @@ PlayWidget::PlayWidget(QWidget *parent)
 {
     ui->setupUi(this);
     ui->comboBox->addItems({"9x9", "13x13", "19x19"});
-    ui->comboBox->setCurrentIndex(2);
-    selectedBoardSize = 19;
+    ui->comboBox->setCurrentIndex(1);
+    selectedBoardSize = 13;
     connect(ui->comboBox, &QComboBox::currentTextChanged, this, &PlayWidget::onBoardSizeChanged);
 }
 

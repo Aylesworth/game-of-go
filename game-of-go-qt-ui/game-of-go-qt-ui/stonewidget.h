@@ -23,22 +23,7 @@ private:
     Ui::StoneWidget *ui;
 
 protected:
-    void paintEvent(QPaintEvent *event) override {
-        QPainter painter(this);
-        QColor stoneColor(color == 1 ? "black" : "white");
-        painter.setBrush(stoneColor);
-        painter.setPen(stoneColor);
-        painter.setOpacity(opacity);
-        painter.drawEllipse(eps, eps, 2 * stoneRadius - 2 * eps, 2 * stoneRadius - 2 * eps);
-
-        if (withMarker) {
-            QColor markerColor(color == 1 ? "white" : "black");
-            int markerRadius = 0.35 * stoneRadius;
-            painter.setBrush(markerColor);
-            painter.setPen(markerColor);
-            painter.drawEllipse(stoneRadius - markerRadius, stoneRadius - markerRadius, 2 * markerRadius, 2 * markerRadius);
-        }
-    }
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     int color;

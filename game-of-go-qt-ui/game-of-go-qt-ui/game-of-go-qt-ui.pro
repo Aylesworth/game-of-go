@@ -20,6 +20,7 @@ HEADERS += gameboardwidget.h \
            registerwindow.h \
            mainwindow.h \
            stonewidget.h \
+           territorywidget.h \
            socket.h \
            gamewidget.h \
            menuwidget.h \
@@ -32,6 +33,7 @@ FORMS += gameboardwidget.ui \
          registerwindow.ui \
          mainwindow.ui \
          stonewidget.ui \
+         territorywidget.ui \
          gamewidget.ui \
          menuwidget.ui \
          playwidget.ui \
@@ -44,6 +46,7 @@ SOURCES += gameboardwidget.cpp \
            main.cpp \
            mainwindow.cpp \
            stonewidget.cpp \
+           territorywidget.cpp \
            socket.cpp \
            gamewidget.cpp \
            menuwidget.cpp \

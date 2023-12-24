@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include "gamewidget.h"
+#include "gameboardwidget.h"
 #include "menuwidget.h"
 #include "playwidget.h"
 #include "scoreboardwidget.h"
@@ -16,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     socket = Socket::getInstance();
     connect(socket, &Socket::messageReceived, this, &MainWindow::onMessageReceived);
-    setCentralWidget(new GameWidget(19, 1, this));
+    setCentralWidget(new MenuWidget);
 }
 
 MainWindow::~MainWindow()
@@ -28,7 +29,6 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
     if (msgtype == "INVITE") {
         QStringList params = payload.split("\n", Qt::SkipEmptyParts);
         QString username = params[0];
-        int boardSize = params[1].toInt();
         if (QMessageBox::information(
             this,
             "Message",
