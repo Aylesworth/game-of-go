@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <QString>
 #include <QStringList>
+#include <QDebug>
 
 QString Socket::serverAddress = "127.0.0.1";
 int Socket::serverPort = 8080;
@@ -88,11 +89,37 @@ void Socket::sendMessage(QString msgtype, QString payload) {
 void Socket::runReceiveThread() {
     char buff[BUFF_SIZE];
     int n_received;
-    QString header, payload, msgtype, blocktype, fullpayload;
+    QString header, payload, msgtype, blocktype, fullpayload = "", remaining = "";
     int payloadlen;
     while (1) {
-        fullpayload = "";
         do {
+            while (remaining.size() > 0) {
+                int split_idx = remaining.indexOf("\n");
+
+                header = remaining.left(split_idx);
+                payload = remaining.mid(split_idx + 1);
+
+                QStringList headerFields = header.split(' ');
+                msgtype = headerFields[0];
+                blocktype = headerFields[1];
+                payloadlen = headerFields[2].toInt();
+                qDebug() << QString("msgtype = %1, blocktype = %2, payloadlen = %3, payload.size() = %4").arg(msgtype).arg(blocktype).arg(payloadlen).arg(payload.size());
+
+                if (payloadlen < payload.size()) {
+                    remaining = payload.mid(payloadlen);
+                    payload = payload.mid(0, payloadlen);
+                    qDebug() << QString("payload = %1, remaining = %2").arg(payload).arg(remaining);
+                } else {
+                    remaining = "";
+                    qDebug() << QString("payload = %1").arg(payload);
+                }
+                fullpayload += payload;
+
+                if (blocktype == "L") {
+                    emit messageReceived(msgtype, fullpayload);
+                    fullpayload = "";
+                }
+            }
             n_received = recv(sockfd, buff, BUFF_SIZE - 1, 0);
             if (n_received <= 0) {
                 printf("Server closed\n");
@@ -111,10 +138,22 @@ void Socket::runReceiveThread() {
             msgtype = headerFields[0];
             blocktype = headerFields[1];
             payloadlen = headerFields[2].toInt();
+            qDebug() << QString("msgtype = %1, blocktype = %2, payloadlen = %3").arg(msgtype).arg(blocktype).arg(payloadlen);
+
+            if (payloadlen < payload.size()) {
+                remaining = payload.mid(payloadlen);
+                payload = payload.mid(0, payloadlen);
+                qDebug() << QString("payload = %1, remaining = %2").arg(payload).arg(remaining);
+            } else {
+                remaining = "";
+                qDebug() << QString("payload = %1").arg(payload);
+            }
+
             fullpayload += payload;
         } while (blocktype != "L");
 
         emit messageReceived(msgtype, fullpayload);
+        fullpayload = "";
     }
 }
 

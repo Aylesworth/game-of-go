@@ -19,14 +19,15 @@ class GameWidget : public QWidget
 public:
     explicit GameWidget(int boardSize, int myColor, QWidget *parent = nullptr);
     ~GameWidget();
+    bool handleCloseRequest();
 
 private slots:
     void onMessageReceived(QString msgtype, QString payload);
     void onGameBoardClicked(QString coords);
-
     void on_btn_pass_clicked();
-
     void on_btn_resign_clicked();
+
+    void on_btn_leave_clicked();
 
 private:
     Ui::GameWidget *ui;

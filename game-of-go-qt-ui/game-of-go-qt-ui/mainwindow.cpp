@@ -9,6 +9,8 @@
 #include "socket.h"
 
 #include <QMessageBox>
+#include <QDebug>
+#include <QCloseEvent>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -45,7 +47,7 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
     if (msgtype == "INVRES") {
         QStringList params = payload.split("\n", Qt::SkipEmptyParts);
         QString username = params[0];
-        int boardSize = params[1].toInt();
+        // int boardSize = params[1].toInt();
         QString reply = params[2];
         if (reply == "DECLINE")
             QMessageBox::information(this, "Message", "Player " + username + " declined your challenge");
@@ -58,4 +60,13 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
         int color = params[1].toInt();
         setCentralWidget(new GameWidget(boardSize, color, this));
     }
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+    GameWidget *gameWidget;
+    if ((gameWidget = qobject_cast<GameWidget *>(centralWidget())) && !gameWidget->handleCloseRequest()) {
+        event->ignore();
+        return;
+    }
+    event->accept();
 }

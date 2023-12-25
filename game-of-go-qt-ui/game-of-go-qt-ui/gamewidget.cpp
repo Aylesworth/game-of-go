@@ -3,7 +3,9 @@
 #include "gameboardwidget.h"
 #include "scoreboardwidget.h"
 #include "logtablewidget.h"
+#include "mainwindow.h"
 #include "socket.h"
+#include "menuwidget.h"
 
 #include <QVBoxLayout>
 #include <QMessageBox>
@@ -195,6 +197,28 @@ void GameWidget::on_btn_resign_clicked()
         ui->btn_resign->setEnabled(false);
         ui->lbl_prompt->setText(myColor == 1 ? "Black resigns. White wins!" : "White resigns. Black wins!");
         logTable->addRow(myColor, "RS");
+    }
+}
+
+bool GameWidget::handleCloseRequest() {
+    if (gameFinished) return true;
+    if (QMessageBox::information(
+            this,
+            "Message",
+            "Are you sure you want to leave?\nThis will be considered as your defeat.",
+            {QMessageBox::Yes, QMessageBox::No},
+            QMessageBox::No
+            ) == QMessageBox::Yes) {
+        socket->sendMessage("INTRPT", QString("%1\nRESIGN\n").arg(myColor));
+        return true;
+    }
+    return false;
+}
+
+void GameWidget::on_btn_leave_clicked()
+{
+    if (handleCloseRequest()) {
+        qobject_cast<MainWindow *>(parentWidget())->setCentralWidget(new MenuWidget(parentWidget()));
     }
 }
 
