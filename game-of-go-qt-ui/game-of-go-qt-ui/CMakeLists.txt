@@ -37,6 +37,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         territorywidget.h territorywidget.cpp territorywidget.ui
         historywidget.h historywidget.cpp historywidget.ui
         historyitemwidget.h historyitemwidget.cpp historyitemwidget.ui
+        replaywidget.h replaywidget.cpp replaywidget.ui
 
 
 

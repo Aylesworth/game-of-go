@@ -1,7 +1,12 @@
 #include "historyitemwidget.h"
 #include "ui_historyitemwidget.h"
+#include "mainwindow.h"
+#include "replaywidget.h"
+#include "socket.h"
 
 #include <QDateTime>
+#include <QDebug>
+#include <QMainWindow>
 
 HistoryItemWidget::HistoryItemWidget(
         QString id,
@@ -14,6 +19,12 @@ HistoryItemWidget::HistoryItemWidget(
         QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::HistoryItemWidget)
+    , socket(Socket::getInstance())
+    , id(id)
+    , boardSize(boardSize)
+    , color(color)
+    , blackScore(blackScore)
+    , whiteScore(whiteScore)
 {
     setFixedSize(720, 120);
     ui->setupUi(this);
@@ -27,9 +38,39 @@ HistoryItemWidget::HistoryItemWidget(
     ui->lbl_result->setStyleSheet(QString("color: %1;").arg(victory ? "DARKBLUE" : "DARKRED"));
     ui->lbl_scores->setText(QString("Black score: %1\nWhite score: %2").arg(blackScore).arg(whiteScore));
     ui->lbl_time->setText(QDateTime::fromSecsSinceEpoch(time).toString("hh:mm dd/MM/yyyy"));
+
+    connect(socket, &Socket::messageReceived, this, &HistoryItemWidget::onMessageReceived);
 }
 
 HistoryItemWidget::~HistoryItemWidget()
 {
     delete ui;
 }
+
+void HistoryItemWidget::on_btn_record_clicked()
+{
+    socket->sendMessage("REPLAY", id + "\n");
+}
+
+void HistoryItemWidget::onMessageReceived(QString msgtype, QString payload) {
+    if (msgtype == "REPLAY") {
+        QStringList params = payload.split("\n");
+        QStringList log = params[0].split(" ", Qt::SkipEmptyParts);
+        QStringList blackTerritory = params[1].split(" ", Qt::SkipEmptyParts);
+        QStringList whiteTerritory = params[2].split(" ", Qt::SkipEmptyParts);
+
+        QMainWindow *w = static_cast<QMainWindow *>(parent()->parent()->parent()->parent()->parent());
+        w->setCentralWidget(new ReplayWidget(
+            boardSize,
+            color,
+            blackScore,
+            whiteScore,
+            log,
+            blackTerritory,
+            whiteTerritory,
+            w
+        ));
+        return;
+    }
+}
+

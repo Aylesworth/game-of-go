@@ -1,6 +1,7 @@
 #ifndef HISTORYITEMWIDGET_H
 #define HISTORYITEMWIDGET_H
 
+#include "socket.h"
 #include <QWidget>
 
 namespace Ui {
@@ -23,8 +24,18 @@ public:
         QWidget *parent = nullptr);
     ~HistoryItemWidget();
 
+private slots:
+    void onMessageReceived(QString msgtype, QString payload);
+    void on_btn_record_clicked();
+
 private:
     Ui::HistoryItemWidget *ui;
+    Socket *socket;
+    QString id;
+    int boardSize;
+    int color;
+    float blackScore;
+    float whiteScore;
 };
 
 #endif // HISTORYITEMWIDGET_H

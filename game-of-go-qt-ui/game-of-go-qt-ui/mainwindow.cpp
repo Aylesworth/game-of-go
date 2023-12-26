@@ -2,6 +2,7 @@
 #include "./ui_mainwindow.h"
 #include "gamewidget.h"
 #include "menuwidget.h"
+#include "replaywidget.h"
 #include "socket.h"
 
 #include <QMessageBox>
@@ -16,6 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
     socket = Socket::getInstance();
     connect(socket, &Socket::messageReceived, this, &MainWindow::onMessageReceived);
     setCentralWidget(new MenuWidget);
+    // setCentralWidget(new ReplayWidget(13, 1, 10, 12.5, {"1+E5","2+E6","1+E7","2+E8/1-E5,E7"}, {"A4", "D9"}, {"B7", "G10"}, this));
 }
 
 MainWindow::~MainWindow()

@@ -35,7 +35,7 @@ GameWidget::GameWidget(int boardSize, int myColor, QWidget *parent)
     ui->lbl_prompt->setText(QString("You are %1. Black's turn").arg(myColor == 1 ? "black" : "white"));
     gameBoard->setStoneShadowDisabled(!myTurn);
 
-    connect(gameBoard, &GameBoardWidget::click, this, &GameWidget::onGameBoardClicked);
+    connect(gameBoard, &GameBoardWidget::clicked, this, &GameWidget::onGameBoardClicked);
     connect(socket, &Socket::messageReceived, this, &GameWidget::onMessageReceived);
 }
 

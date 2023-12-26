@@ -54,7 +54,7 @@ void GameBoardWidget::paintEvent(QPaintEvent *event) {
 }
 
 void GameBoardWidget::mouseMoveEvent(QMouseEvent *event) {
-    if (playerColor == 0 || shadowDisabled) return;
+    if (playerColor == 0 || shadowDisabled || shadow == nullptr) return;
     moveStoneShadow(pointToCoords(QPoint(event->pos().x(), event->pos().y())));
 }
 
@@ -62,10 +62,11 @@ void GameBoardWidget::mousePressEvent(QMouseEvent *event) {
     if (playerColor == 0) return;
     QString coords = pointToCoords(QPoint(event->pos().x(), event->pos().y()));
     if (stoneMap[coords] != nullptr) return;
-    emit click(coords);
+    emit clicked(coords);
 }
 
 void GameBoardWidget::leaveEvent(QEvent *event) {
+    if (playerColor == 0) return;
     setStoneShadowVisible(false);
 }
 
@@ -93,6 +94,7 @@ void GameBoardWidget::removeStones(QStringList coordsList) {
 }
 
 void GameBoardWidget::moveStoneShadow(QString coords) {
+    if (shadow == nullptr) return;
     if (stoneMap[coords] != nullptr) return;
     QPoint point = coordsToPoint(coords);
     shadow->setGeometry(point.x() - stoneRadius, point.y() - stoneRadius, 2 * stoneRadius, 2 * stoneRadius);
@@ -101,12 +103,14 @@ void GameBoardWidget::moveStoneShadow(QString coords) {
 }
 
 void GameBoardWidget::setStoneShadowVisible(bool visible) {
+    if (shadow == nullptr) return;
     if (visible) shadow->show();
     else shadow->hide();
     update();
 }
 
 void GameBoardWidget::setStoneShadowDisabled(bool disabled) {
+    if (shadow == nullptr) return;
     shadowDisabled = disabled;
     if (disabled) {
         shadow->hide();
@@ -123,6 +127,13 @@ void GameBoardWidget::drawTerritory(int color, QStringList coordsList) {
         territoryMap[coords] = territory;
     }
     update();
+}
+
+void GameBoardWidget::removeAllTerritory() {
+    for (auto &entry: territoryMap) {
+        entry.second->hide();
+    }
+    territoryMap.clear();
 }
 
 QString GameBoardWidget::pointToCoords(QPoint point) {

@@ -24,12 +24,13 @@ public:
     void setStoneShadowVisible(bool visible);
     void setStoneShadowDisabled(bool disabled);
     void drawTerritory(int color, QStringList coordsList);
+    void removeAllTerritory();
 
 private:
     Ui::GameBoardWidget *ui;
 
 signals:
-    void click(QString coords);
+    void clicked(QString coords);
 
 protected:
     void paintEvent(QPaintEvent *event) override;

@@ -26,7 +26,6 @@ private slots:
     void onGameBoardClicked(QString coords);
     void on_btn_pass_clicked();
     void on_btn_resign_clicked();
-
     void on_btn_leave_clicked();
 
 private:
