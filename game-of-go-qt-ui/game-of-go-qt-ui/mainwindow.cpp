@@ -1,11 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include "gamewidget.h"
-#include "gameboardwidget.h"
 #include "menuwidget.h"
-#include "playwidget.h"
-#include "scoreboardwidget.h"
-#include "logtablewidget.h"
 #include "socket.h"
 
 #include <QMessageBox>

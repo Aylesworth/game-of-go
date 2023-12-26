@@ -69,7 +69,7 @@ void saveGame(GoGame *game) {
 
 vector<GameRecord *> findGamesByPlayer(int playerId) {
     auto pstmt = con->prepareStatement(
-            "SELECT g.id, g.board_size, p1.username AS black_player, p2.username AS white_player, black_score, white_score, time "
+            "SELECT g.id, g.board_size, p1.id AS black_id, p1.username AS black_name, p2.id AS white_id, p2.username AS white_name, black_score, white_score, time "
             "FROM game g "
             "JOIN account p1 ON p1.id = g.black_player "
             "JOIN account p2 ON p2.id = g.white_player "
@@ -81,11 +81,20 @@ vector<GameRecord *> findGamesByPlayer(int playerId) {
 
     vector < GameRecord * > games;
     while (rs->next()) {
+        int color;
+        string opponent;
+        if (rs->getInt("black_id") == playerId) {
+            color = 1;
+            opponent = rs->getString("white_name");
+        } else {
+            color = 2;
+            opponent = rs->getString("black_name");
+        }
         GameRecord *game = new GameRecord(
                 rs->getString("id"),
                 rs->getInt("board_size"),
-                rs->getString("black_player"),
-                rs->getString("white_player"),
+                color,
+                opponent,
                 rs->getDouble("black_score"),
                 rs->getDouble("white_score"),
                 rs->getInt64("time")

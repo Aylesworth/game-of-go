@@ -18,6 +18,8 @@ public:
 private slots:
     void on_btn_play_clicked();
 
+    void on_btn_history_clicked();
+
 private:
     Ui::MenuWidget *ui;
 };

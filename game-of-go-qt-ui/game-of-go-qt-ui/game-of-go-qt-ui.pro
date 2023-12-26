@@ -27,7 +27,9 @@ HEADERS += gameboardwidget.h \
            playwidget.h \
            challengewindow.h \
            scoreboardwidget.h \
-           logtablewidget.h
+           logtablewidget.h \
+           historywidget.h \
+           historyitemwidget.h
 FORMS += gameboardwidget.ui \
          loginwindow.ui \
          registerwindow.ui \
@@ -39,7 +41,9 @@ FORMS += gameboardwidget.ui \
          playwidget.ui \
          challengewindow.ui \
          scoreboardwidget.ui \
-         logtablewidget.ui
+         logtablewidget.ui \
+         historywidget.ui \
+         historyitemwidget.ui
 SOURCES += gameboardwidget.cpp \
            loginwindow.cpp \
            registerwindow.cpp \
@@ -53,4 +57,6 @@ SOURCES += gameboardwidget.cpp \
            playwidget.cpp \
            challengewindow.cpp \
            scoreboardwidget.cpp \
-           logtablewidget.cpp
+           logtablewidget.cpp \
+           historywidget.cpp \
+           historyitemwidget.cpp

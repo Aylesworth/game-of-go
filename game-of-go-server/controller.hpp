@@ -436,8 +436,8 @@ void *handleRequest(void *arg) {
             memset(payload, 0, 16 * BUFF_SIZE);
             memset(buff, 0, BUFF_SIZE);
             for (const GameRecord *game: games) {
-                sprintf(buff, "%s %d %s %s %.2f %.2f %ld\n", game->id.c_str(), game->boardSize,
-                        game->blackPlayer.c_str(), game->whitePlayer.c_str(),
+                sprintf(buff, "%s %d %d %s %.2f %.2f %ld\n", game->id.c_str(), game->boardSize,
+                        game->color, game->opponent.c_str(),
                         game->blackScore, game->whiteScore, game->time);
                 strcat(payload, buff);
             }

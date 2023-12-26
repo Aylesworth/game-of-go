@@ -21,17 +21,17 @@ struct Account {
 struct GameRecord {
     string id;
     int boardSize;
-    string blackPlayer;
-    string whitePlayer;
+    int color;
+    string opponent;
     double blackScore;
     double whiteScore;
     int64_t time;
 
     GameRecord() {}
 
-    GameRecord(string id, int boardSize, string blackPlayer, string whitePlayer,
+    GameRecord(string id, int boardSize, int color, string opponent,
                double blackScore, double whiteScore, int64_t time) :
-            id(id), boardSize(boardSize), blackPlayer(blackPlayer), whitePlayer(whitePlayer),
+            id(id), boardSize(boardSize), color(color), opponent(opponent),
             blackScore(blackScore), whiteScore(whiteScore), time(time) {}
 };
 
