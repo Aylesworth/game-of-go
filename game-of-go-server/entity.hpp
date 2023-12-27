@@ -10,12 +10,13 @@ struct Account {
     int id;
     string username;
     string password;
-    int points;
+    int elo;
+    string rankType;
 
     Account() {}
 
-    Account(int id, string username, string password, int points) :
-            id(id), username(username), password(password), points(points) {}
+    Account(int id, string username, string password, int elo, string rankType) :
+            id(id), username(username), password(password), elo(elo), rankType(rankType) {}
 };
 
 struct GameRecord {

@@ -46,6 +46,7 @@ int main() {
 
     printf("Server listening on port %d.\n", PORT);
 
+//    generateMatches(10);
     while (1) {
         clientSocket = accept(serverSocket, (struct sockaddr *) &client, &sinSize);
         printf("New connection on socket %d\n", clientSocket);

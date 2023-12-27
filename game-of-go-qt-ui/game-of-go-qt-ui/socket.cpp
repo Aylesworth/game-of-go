@@ -123,7 +123,7 @@ void Socket::runReceiveThread() {
             n_received = recv(sockfd, buff, BUFF_SIZE - 1, 0);
             if (n_received <= 0) {
                 printf("Server closed\n");
-                return;
+                exit(EXIT_FAILURE);
             }
             buff[n_received] = '\0';
             printf("Received:\n%s\n", buff);

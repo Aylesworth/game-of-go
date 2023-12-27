@@ -60,27 +60,37 @@ Account *handleSignIn(char *payload) {
     if (passwordHash != account->password)
         return NULL;
 
+    account->password = "";
     return account;
 }
 
 string generateGameId() {
-    string id = "";
-
-    srand(time(NULL));
+    string id;
     vector<char> pool;
     for (char c = 'A'; c <= 'Z'; c++) pool.push_back(c);
     for (char c = 'a'; c <= 'z'; c++) pool.push_back(c);
     for (char c = '0'; c <= '9'; c++) pool.push_back(c);
 
-    for (int i = 0; i < 16; i++) {
-        id += pool[rand() % pool.size()];
-    }
+    do {
+        id = "";
+        srand(time(NULL));
+        for (int i = 0; i < 16; i++) {
+            id += pool[rand() % pool.size()];
+        }
+    } while (doesGameIdExist(id));
+
+    printf("Generate new id: %s\n", id.c_str());
 
     return id;
 }
 
 void handleSaveGame(GoGame *game) {
+    printf("Saving game %s\n", game->getId().c_str());
     saveGame(game);
+}
+
+void handleUpdateRanking(Account account) {
+    updateRanking(account);
 }
 
 vector<GameRecord *> handleGetHistory(int playerId) {
@@ -89,6 +99,10 @@ vector<GameRecord *> handleGetHistory(int playerId) {
 
 GameReplay *handleGetReplay(string gameId) {
     return getGameReplayInfo(gameId);
+}
+
+vector<Account *> getRandomPlayers(int quantity) {
+    return randomPlayers(quantity);
 }
 
 #endif //GAME_OF_GO_SERVER_SERVICE_HPP

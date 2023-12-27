@@ -30,7 +30,7 @@ sql::Connection *con = getConnection();
 
 void createAccount(Account account) {
     auto pstmt = con->prepareStatement(
-            "INSERT INTO account (username, password, points) VALUES (?, ?, 0)");
+            "INSERT INTO account (username, password, elo, rank_type) VALUES (?, ?, 1000, '11K')");
     pstmt->setString(1, account.username);
     pstmt->setString(2, account.password);
     pstmt->executeUpdate();
@@ -44,11 +44,41 @@ Account *findAccount(string username) {
 
     if (rs->next()) {
         Account *account = new Account(rs->getInt("id"), rs->getString("username"), rs->getString("password"),
-                                       rs->getInt("points"));
+                                       rs->getInt("elo"), rs->getString("rank_type"));
         return account;
     } else {
         return NULL;
     }
+}
+
+vector<Account *> randomPlayers(int quantity) {
+    auto pstmt = con->prepareStatement("SELECT * FROM account ORDER BY RAND() LIMIT ?");
+    pstmt->setInt(1, quantity);
+    auto rs = pstmt->executeQuery();
+
+    vector < Account * > players;
+    while (rs->next()) {
+        players.push_back(new Account(rs->getInt("id"), rs->getString("username"), rs->getString("password"),
+                                      rs->getInt("elo"), rs->getString("rank_type")));
+    }
+
+    return players;
+}
+
+void updateRanking(Account account) {
+    auto pstmt = con->prepareStatement(
+            "UPDATE account SET elo = ?, rank_type = ? WHERE id = ?");
+    pstmt->setInt(1, account.elo);
+    pstmt->setString(2, account.rankType);
+    pstmt->setInt(3, account.id);
+    pstmt->executeUpdate();
+}
+
+bool doesGameIdExist(string id) {
+    auto pstmt = con->prepareStatement("SELECT * FROM game WHERE id = ?");
+    pstmt->setString(1, id);
+    auto rs = pstmt->executeQuery();
+    return rs->next();
 }
 
 void saveGame(GoGame *game) {

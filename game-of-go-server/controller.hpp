@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <math.h>
 #include <set>
 #include <map>
 
@@ -37,6 +38,7 @@ struct ClientInfo {
 };
 
 set<ClientInfo *> clients;
+Account *cpu = findAccount("@CPU");
 
 map<int, GoGame *>
         games;
@@ -70,20 +72,32 @@ int handleSend(int clientSocket, const char *messageType, const char *payload) {
     char buff[BUFF_SIZE];
     int bytesSent;
     int blockTypeSize = 1;
-    int headerSize = strlen(messageType) + blockTypeSize + 2;
+    int payloadlenSize = 4;
+    int headerSize = strlen(messageType) + blockTypeSize + payloadlenSize + 3;
 
+    printf("payload_length = %ld\n", strlen(payload));
     while (headerSize + strlen(payload) > BUFF_SIZE - 1) {
+        printf("payload_length = %ld\n", strlen(payload));
         memset(buff, 0, BUFF_SIZE);
-        char *payloadSubstring;
+        printf("payload_length = %ld\n", strlen(payload));
+        char payloadSubstring[BUFF_SIZE - headerSize];
+        printf("payload_length = %ld\n", strlen(payload));
         strncpy(payloadSubstring, payload, BUFF_SIZE - 1 - headerSize);
-        sprintf(buff, "%s %s %d\n%s", messageType, "M", BUFF_SIZE - 1 - headerSize, payloadSubstring);
+        printf("payload_length = %ld\n", strlen(payload));
+        sprintf(buff, "%s %s %ld\n%s", messageType, "M", strlen(payloadSubstring), payloadSubstring);
+        printf("payload_length = %ld\n", strlen(payload));
+        printf("msg = %s\n", buff);
+        printf("payload_length = %ld\n", strlen(payload));
 
         bytesSent = send(clientSocket, buff, strlen(buff), 0);
+        printf("payload_length = %ld\n", strlen(payload));
         if (bytesSent < 0) {
             return 0;
         }
+        printf("payload_length = %ld\n", strlen(payload));
 
         payload = payload + (BUFF_SIZE - 1 - headerSize);
+        printf("payload_length = %ld\n", strlen(payload));
     }
 
     memset(buff, 0, BUFF_SIZE);
@@ -141,7 +155,49 @@ void getGameResult(char *buff, GoGame *game) {
             game->getBlackTerritory().c_str(), game->getWhiteTerritory().c_str());
 }
 
-void sendComputerMove(int clientSocket, GoGame *game, int color) {
+string calculateRankType(int elo) {
+    if (elo < 100) {
+        return "Unranked";
+    }
+
+    if (elo < 2100) {
+        int kyu = (2099 - elo) / 100 + 1;
+        return to_string(kyu) + "K";
+    }
+
+    if (elo < 2700) {
+        int dan = (elo - 2000) / 100;
+        return to_string(dan) + "D";
+    }
+
+    if (elo < 2940) {
+        int dan = (elo - 2700) / 30 + 1;
+        return to_string(dan) + "P";
+    }
+
+    return "9P";
+}
+
+void updateRanking(GoGame *game, Account *p1, Account *p2) {
+    double S1 = (p1->id == game->getBlackPlayerId() && game->getBlackScore() > game->getWhiteScore())
+                || (p1->id == game->getWhitePlayerId() && game->getWhiteScore() > game->getBlackScore())
+                ? 1 : 0;
+    double SE1 = 1.0 / (1.0 + exp((p2->elo - p1->elo) / 110));
+    double K1 = -53 / 1300 * p1->elo + 1561 / 13;
+    p1->elo += K1 * (S1 - SE1);
+    p1->rankType = calculateRankType(p1->elo);
+
+    double S2 = 1 - S1;
+    double SE2 = 1 - SE1;
+    double K2 = -53 / 1300 * p2->elo + 1561 / 13;
+    p2->elo += K2 * (S2 - SE2);
+    p2->rankType = calculateRankType(p2->elo);
+
+    handleUpdateRanking(*p1);
+    handleUpdateRanking(*p2);
+}
+
+void sendComputerMove(ClientInfo *player, GoGame *game, int color) {
     char buff[BUFF_SIZE];
     string move = game->generateMove(color);
 
@@ -156,20 +212,51 @@ void sendComputerMove(int clientSocket, GoGame *game, int color) {
         strcat(buff, "\n");
     }
 
-    handleSend(clientSocket, "MOVE", buff);
+    handleSend(player->socket, "MOVE", buff);
 
     if (move == "PA") {
         if (game->pass(color) == 2) {
             getGameResult(buff, game);
-            handleSend(clientSocket, "RESULT", buff);
+            handleSend(player->socket, "RESULT", buff);
             handleSaveGame(game);
+            updateRanking(game, player->account, cpu);
 
             for (ClientInfo *client: clients) {
-                if (client->socket == clientSocket) {
+                if (client->socket == player->socket) {
                     client->status = 0;
                     notifyOnlineStatusChange();
                 }
             }
+        }
+    }
+}
+
+void generateMatches(int number) {
+    for (int i = 0; i < number; i++) {
+        vector < Account * > players = getRandomPlayers(2);
+
+        int boardSizes[3] = {9, 13, 19};
+        GoGame *game = new GoGame(boardSizes[rand() % 3]);
+        game->setId(generateGameId());
+        game->setBlackPlayerId(players[0]->id);
+        game->setWhitePlayerId(players[1]->id);
+
+        int color = 1;
+        string move;
+        while (1) {
+            move = game->generateMove(color);
+            if (move == "PA") {
+                int p = game->pass(color);
+                printf("Pass count = %d\n", p);
+                if (p == 2) {
+                    game->calculateScore();
+                    handleSaveGame(game);
+                    updateRanking(game, players[0], players[1]);
+                    printf("%.1f %.1f\n", game->getBlackScore(), game->getWhiteScore());
+                    break;
+                }
+            }
+            color = 3 - color;
         }
     }
 }
@@ -268,7 +355,7 @@ void *handleRequest(void *arg) {
 
                 if (randomColor != 1) {
                     usleep(100000);
-                    sendComputerMove(clientSocket, game, 3 - randomColor);
+                    sendComputerMove(thisClient, game, 3 - randomColor);
                 }
 
                 continue;
@@ -349,7 +436,7 @@ void *handleRequest(void *arg) {
                         usleep(10000);
                         handleSend(opponentClient->socket, "MOVE", buff);
                     } else {
-                        sendComputerMove(clientSocket, game, 3 - color);
+                        sendComputerMove(thisClient, game, 3 - color);
                     }
                 } else {
                     handleSend(clientSocket, "MOVERR", "");
@@ -362,6 +449,9 @@ void *handleRequest(void *arg) {
                     handleSend(clientSocket, "RESULT", buff);
                     if (opponentClient != NULL) {
                         handleSend(opponentClient->socket, "RESULT", buff);
+                        updateRanking(game, thisClient->account, opponentClient->account);
+                    } else {
+                        updateRanking(game, thisClient->account, cpu);
                     }
                 } else {
                     if (opponentClient == NULL) {
@@ -380,9 +470,10 @@ void *handleRequest(void *arg) {
                             getGameResult(buff, game);
                             handleSend(clientSocket, "RESULT", buff);
                             handleSaveGame(game);
+                            updateRanking(game, thisClient->account, cpu);
                             continue;
                         }
-                        sendComputerMove(clientSocket, game, 3 - color);
+                        sendComputerMove(thisClient, game, 3 - color);
                         continue;
                     }
                     memset(buff, 0, BUFF_SIZE);
@@ -416,6 +507,9 @@ void *handleRequest(void *arg) {
                 handleSend(clientSocket, "RESULT", buff);
                 if (opponentClient != NULL) {
                     handleSend(opponentClient->socket, "RESULT", buff);
+                    updateRanking(game, thisClient->account, opponentClient->account);
+                } else {
+                    updateRanking(game, thisClient->account, cpu);
                 }
 
                 handleSaveGame(game);
@@ -448,10 +542,15 @@ void *handleRequest(void *arg) {
             // Get game replay
         else if (strcmp(messageType, "REPLAY") == 0) {
             char *id = strtok(payload, "\n");
+            printf("id = %s\n", id);
             GameReplay *replay = handleGetReplay(id);
-            const char *data = (string(payload) + "\n" + replay->log + "\n" + replay->blackTerritory + " \n" + replay->whiteTerritory +
+            printf("replay = %p\n", replay);
+            const char *data = (string(payload) + "\n" + replay->log + "\n" + replay->blackTerritory + " \n" +
+                                replay->whiteTerritory +
                                 " \n").c_str();
+            printf("data = %p\n", data);
             handleSend(clientSocket, "REPLAY", data);
+            printf("data = %p\n", data);
         }
     }
 

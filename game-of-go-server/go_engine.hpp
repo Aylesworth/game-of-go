@@ -271,7 +271,7 @@ public:
     }
 
     void printBoard() {
-        string symbol = ".#o .bw +   X";
+        string symbol = ".#o .bw +    ";
 
         printf("\n");
         for (int row = 0; row < boardRange; row++) {
@@ -285,8 +285,6 @@ public:
     }
 
     int play(string coords, int color) {
-        consecutivePass = 0;
-
         char colSymbol = coords[0];
         int col = colSymbol - 'A' + 1;
         if (colSymbol >= 'J') col--;
@@ -295,6 +293,7 @@ public:
         int pos = row * boardRange + col;
 
         if (canMove(pos, color)) {
+            consecutivePass = 0;
             board[pos] = color;
             capture(3 - color);
             printBoard();
@@ -503,7 +502,9 @@ public:
         } else {
             srand(time(NULL));
             int random = rand() % 4;
-            return !random ? "PA" : randomMove(color);
+            string move = !random ? "PA" : randomMove(color);
+            printf("move: %s\n", move.c_str());
+            return move;
         }
     }
 
