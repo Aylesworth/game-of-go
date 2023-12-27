@@ -16,7 +16,7 @@ class StoneWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit StoneWidget(int color, int stoneRadius, bool withMarker = 1, qreal opacity = 1, QWidget *parent = nullptr);
+    explicit StoneWidget(int color, int stoneRadius, bool withMarker = false, qreal opacity = 1, QWidget *parent = nullptr);
     ~StoneWidget();
 
 private:

@@ -131,17 +131,6 @@
     <set>Qt::AlignCenter</set>
    </property>
   </widget>
-  <widget class="QWidget" name="verticalLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>40</y>
-     <width>51</width>
-     <height>51</height>
-    </rect>
-   </property>
-   <layout class="QVBoxLayout" name="vbox_color"/>
-  </widget>
   <widget class="QLabel" name="lbl_boardsize">
    <property name="geometry">
     <rect>

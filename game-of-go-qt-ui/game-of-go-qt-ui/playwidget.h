@@ -22,6 +22,8 @@ private slots:
     void on_btn_cpu_clicked();
     void onBoardSizeChanged(const QString &currentSize);
 
+    void on_pushButton_2_clicked();
+
 private:
     Ui::PlayWidget *ui;
     Socket *socket;

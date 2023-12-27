@@ -449,7 +449,7 @@ void *handleRequest(void *arg) {
         else if (strcmp(messageType, "REPLAY") == 0) {
             char *id = strtok(payload, "\n");
             GameReplay *replay = handleGetReplay(id);
-            const char *data = (replay->log + "\n" + replay->blackTerritory + " \n" + replay->whiteTerritory +
+            const char *data = (string(payload) + "\n" + replay->log + "\n" + replay->blackTerritory + " \n" + replay->whiteTerritory +
                                 " \n").c_str();
             handleSend(clientSocket, "REPLAY", data);
         }

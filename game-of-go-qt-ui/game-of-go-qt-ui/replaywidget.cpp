@@ -4,6 +4,7 @@
 #include "gameboardwidget.h"
 #include "scoreboardwidget.h"
 #include "logtablewidget.h"
+#include "mainwindow.h"
 
 #include <QDebug>
 
@@ -77,7 +78,7 @@ void ReplayWidget::onTimeout() {
 }
 
 void ReplayWidget::play() {
-    ui->btn_play->setText("⏸");
+    ui->btn_play->setText("||");
     disconnect(ui->btn_play, &QPushButton::clicked, this, &ReplayWidget::play);
     connect(ui->btn_play, &QPushButton::clicked, this, &ReplayWidget::pause);
     timer->start();
@@ -208,3 +209,9 @@ void ReplayWidget::last() {
     pause();
     while (next());
 }
+
+void ReplayWidget::on_btn_leave_clicked()
+{
+    MainWindow::getInstance()->previous();
+}
+

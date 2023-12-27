@@ -3,6 +3,7 @@
 
 #include "socket.h"
 #include <QMainWindow>
+#include <QStackedWidget>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -14,9 +15,17 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+private:
+    static MainWindow *instance;
+public:
+    static MainWindow *getInstance();
+
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void swap(QWidget *widget);
+    void next(QWidget *widget);
+    void previous();
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -24,6 +33,7 @@ protected:
 private:
     Ui::MainWindow *ui;
     Socket *socket;
+    QStackedWidget *stackedWidget;
 
 signals:
     void closeChildWindows();

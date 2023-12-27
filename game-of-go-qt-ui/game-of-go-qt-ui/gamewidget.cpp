@@ -218,7 +218,7 @@ bool GameWidget::handleCloseRequest() {
 void GameWidget::on_btn_leave_clicked()
 {
     if (handleCloseRequest()) {
-        qobject_cast<MainWindow *>(parentWidget())->setCentralWidget(new MenuWidget(parentWidget()));
+        MainWindow::getInstance()->previous();
     }
 }
 

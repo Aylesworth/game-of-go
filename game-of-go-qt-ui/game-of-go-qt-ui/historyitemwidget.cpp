@@ -2,11 +2,11 @@
 #include "ui_historyitemwidget.h"
 #include "mainwindow.h"
 #include "replaywidget.h"
+#include "stonewidget.h"
 #include "socket.h"
 
 #include <QDateTime>
 #include <QDebug>
-#include <QMainWindow>
 
 HistoryItemWidget::HistoryItemWidget(
         QString id,
@@ -39,11 +39,16 @@ HistoryItemWidget::HistoryItemWidget(
     ui->lbl_scores->setText(QString("Black score: %1\nWhite score: %2").arg(blackScore).arg(whiteScore));
     ui->lbl_time->setText(QDateTime::fromSecsSinceEpoch(time).toString("hh:mm dd/MM/yyyy"));
 
+    StoneWidget *stone = new StoneWidget(color, 25, false, 1, this);
+    stone->setGeometry(20, 40, 60, 60);
+    stone->show();
+
     connect(socket, &Socket::messageReceived, this, &HistoryItemWidget::onMessageReceived);
 }
 
 HistoryItemWidget::~HistoryItemWidget()
 {
+    qDebug() << "destroyed";
     delete ui;
 }
 
@@ -55,20 +60,22 @@ void HistoryItemWidget::on_btn_record_clicked()
 void HistoryItemWidget::onMessageReceived(QString msgtype, QString payload) {
     if (msgtype == "REPLAY") {
         QStringList params = payload.split("\n");
-        QStringList log = params[0].split(" ", Qt::SkipEmptyParts);
-        QStringList blackTerritory = params[1].split(" ", Qt::SkipEmptyParts);
-        QStringList whiteTerritory = params[2].split(" ", Qt::SkipEmptyParts);
+        QString id = params[0];
+        if (id != this->id) return;
 
-        QMainWindow *w = static_cast<QMainWindow *>(parent()->parent()->parent()->parent()->parent());
-        w->setCentralWidget(new ReplayWidget(
+        QStringList log = params[1].split(" ", Qt::SkipEmptyParts);
+        QStringList blackTerritory = params[2].split(" ", Qt::SkipEmptyParts);
+        QStringList whiteTerritory = params[3].split(" ", Qt::SkipEmptyParts);
+
+        MainWindow *w = MainWindow::getInstance();
+        w->next(new ReplayWidget(
             boardSize,
             color,
             blackScore,
             whiteScore,
             log,
             blackTerritory,
-            whiteTerritory,
-            w
+            whiteTerritory
         ));
         return;
     }

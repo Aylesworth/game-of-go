@@ -52,8 +52,8 @@ void LoginWindow::submit()
 void LoginWindow::onMessageReceived(QString msgtype, QString payload) {
     if (msgtype == "OK") {
         this->hide();
-        MainWindow *w = new MainWindow();
-        w->setCentralWidget(new MenuWidget(w));
+        MainWindow *w = MainWindow::getInstance();
+        w->next(new MenuWidget());
         w->show();
     } else if (msgtype == "ERROR") {
         ui->lbl_error->setText(payload);

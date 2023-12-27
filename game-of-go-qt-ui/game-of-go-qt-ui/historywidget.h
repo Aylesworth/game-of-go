@@ -20,6 +20,8 @@ public:
 private slots:
     void onMessageReceived(QString msgtype, QString payload);
 
+    void on_btn_back_clicked();
+
 private:
     Ui::HistoryWidget *ui;
     QVBoxLayout *vBox;

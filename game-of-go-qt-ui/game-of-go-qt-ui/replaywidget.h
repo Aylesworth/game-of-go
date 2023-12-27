@@ -29,6 +29,7 @@ public:
     ~ReplayWidget();
 
 private slots:
+    void on_btn_leave_clicked();
     void onCurrentTextChanged(const QString &currentText);
     void onTimeout();
     void play();

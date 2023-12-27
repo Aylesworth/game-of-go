@@ -1,6 +1,7 @@
 #include "playwidget.h"
 #include "ui_playwidget.h"
 #include "challengewindow.h"
+#include "mainwindow.h"
 #include "socket.h"
 
 PlayWidget::PlayWidget(QWidget *parent)
@@ -37,5 +38,11 @@ void PlayWidget::on_btn_challenge_clicked()
 void PlayWidget::on_btn_cpu_clicked()
 {
     socket->sendMessage("INVITE", "@CPU\n" + QString::number(selectedBoardSize) + "\n");
+}
+
+
+void PlayWidget::on_pushButton_2_clicked()
+{
+    MainWindow::getInstance()->previous();
 }
 

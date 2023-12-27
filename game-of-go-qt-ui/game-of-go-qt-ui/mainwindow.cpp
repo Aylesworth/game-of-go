@@ -8,16 +8,26 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <QCloseEvent>
+#include <QStackedWidget>
+
+MainWindow *MainWindow::instance = nullptr;
+
+MainWindow *MainWindow::getInstance() {
+    if (instance == nullptr) instance = new MainWindow;
+    return instance;
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , stackedWidget(new QStackedWidget(this))
 {
     ui->setupUi(this);
     socket = Socket::getInstance();
     connect(socket, &Socket::messageReceived, this, &MainWindow::onMessageReceived);
-    setCentralWidget(new MenuWidget);
-    // setCentralWidget(new ReplayWidget(13, 1, 10, 12.5, {"1+E5","2+E6","1+E7","2+E8/1-E5,E7"}, {"A4", "D9"}, {"B7", "G10"}, this));
+
+    stackedWidget->addWidget(new MenuWidget);
+    setCentralWidget(stackedWidget);
 }
 
 MainWindow::~MainWindow()
@@ -56,7 +66,7 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
         QStringList params = payload.split("\n", Qt::SkipEmptyParts);
         int boardSize = params[0].toInt();
         int color = params[1].toInt();
-        setCentralWidget(new GameWidget(boardSize, color, this));
+        next(new GameWidget(boardSize, color));
     }
 }
 
@@ -67,4 +77,18 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         return;
     }
     event->accept();
+}
+
+void MainWindow::swap(QWidget *widget) {
+    stackedWidget->removeWidget(stackedWidget->currentWidget());
+    stackedWidget->setCurrentIndex(stackedWidget->addWidget(widget));
+}
+
+void MainWindow::next(QWidget *widget) {
+    stackedWidget->setCurrentIndex(stackedWidget->addWidget(widget));
+}
+
+void MainWindow::previous() {
+    if (stackedWidget->count() == 1) return;
+    stackedWidget->removeWidget(stackedWidget->currentWidget());
 }

@@ -1,7 +1,10 @@
 #include "historywidget.h"
 #include "ui_historywidget.h"
 #include "historyitemwidget.h"
+#include "mainwindow.h"
 #include "socket.h"
+
+#include <QDebug>
 
 HistoryWidget::HistoryWidget(QWidget *parent)
     : QWidget(parent)
@@ -22,6 +25,7 @@ HistoryWidget::HistoryWidget(QWidget *parent)
 
 HistoryWidget::~HistoryWidget()
 {
+    qDebug() << "destroyed";
     delete ui;
 }
 
@@ -43,3 +47,9 @@ void HistoryWidget::onMessageReceived(QString msgtype, QString payload) {
         }
     }
 }
+
+void HistoryWidget::on_btn_back_clicked()
+{
+    MainWindow::getInstance()->previous();
+}
+
