@@ -48,7 +48,6 @@ HistoryItemWidget::HistoryItemWidget(
 
 HistoryItemWidget::~HistoryItemWidget()
 {
-    qDebug() << "destroyed";
     delete ui;
 }
 

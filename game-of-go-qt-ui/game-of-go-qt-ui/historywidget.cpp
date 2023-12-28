@@ -25,7 +25,6 @@ HistoryWidget::HistoryWidget(QWidget *parent)
 
 HistoryWidget::~HistoryWidget()
 {
-    qDebug() << "destroyed";
     delete ui;
 }
 

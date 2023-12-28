@@ -90,5 +90,8 @@ void MainWindow::next(QWidget *widget) {
 
 void MainWindow::previous() {
     if (stackedWidget->count() == 1) return;
-    stackedWidget->removeWidget(stackedWidget->currentWidget());
+
+    QWidget *w;
+    stackedWidget->removeWidget(w = stackedWidget->currentWidget());
+    delete w;
 }

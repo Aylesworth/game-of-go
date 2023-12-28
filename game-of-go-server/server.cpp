@@ -11,7 +11,6 @@
 #include <string>
 #include <set>
 #include "controller.hpp"
-#include "service.hpp"
 #include "entity.hpp"
 #include "go_engine.hpp"
 
@@ -46,11 +45,10 @@ int main() {
 
     printf("Server listening on port %d.\n", PORT);
 
-//    generateMatches(10);
+//    generateMatches(1);
     while (1) {
         clientSocket = accept(serverSocket, (struct sockaddr *) &client, &sinSize);
         printf("New connection on socket %d\n", clientSocket);
-//        printf("Connection from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
         pthread_t clientThread;
         pthread_create(&clientThread, NULL, handleRequest, (void *) &clientSocket);

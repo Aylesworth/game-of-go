@@ -20,6 +20,8 @@ private slots:
 
     void on_btn_history_clicked();
 
+    void on_btn_rankings_clicked();
+
 private:
     Ui::MenuWidget *ui;
 };

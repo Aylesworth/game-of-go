@@ -51,7 +51,7 @@ Account *findAccount(string username) {
     }
 }
 
-vector<Account *> randomPlayers(int quantity) {
+vector<Account *> getRandomPlayers(int quantity) {
     auto pstmt = con->prepareStatement("SELECT * FROM account ORDER BY RAND() LIMIT ?");
     pstmt->setInt(1, quantity);
     auto rs = pstmt->executeQuery();
@@ -72,6 +72,29 @@ void updateRanking(Account account) {
     pstmt->setString(2, account.rankType);
     pstmt->setInt(3, account.id);
     pstmt->executeUpdate();
+}
+
+vector <pair<int, Account *>> getRankings() {
+    auto pstmt = con->prepareStatement(
+            "SELECT DENSE_RANK() OVER (ORDER BY elo DESC) AS ranking, username, elo, rank_type "
+            "FROM account ORDER BY elo DESC");
+    auto rs = pstmt->executeQuery();
+
+    vector <pair<int, Account *>> rankings;
+    while (rs->next()) {
+        rankings.push_back(make_pair(
+                rs->getInt("ranking"),
+                new Account(
+                        0,
+                        rs->getString("username"),
+                        "",
+                        rs->getInt("elo"),
+                        rs->getString("rank_type")
+                )
+        ));
+    }
+
+    return rankings;
 }
 
 bool doesGameIdExist(string id) {

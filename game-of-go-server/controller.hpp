@@ -5,12 +5,13 @@
 #ifndef GAME_OF_GO_SERVER_CONTROLLER_HPP
 #define GAME_OF_GO_SERVER_CONTROLLER_HPP
 
-#include "service.hpp"
+#include "dao.hpp"
 #include "go_engine.hpp"
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 #include <math.h>
+#include <openssl/md5.h>
 #include <set>
 #include <map>
 
@@ -75,29 +76,18 @@ int handleSend(int clientSocket, const char *messageType, const char *payload) {
     int payloadlenSize = 4;
     int headerSize = strlen(messageType) + blockTypeSize + payloadlenSize + 3;
 
-    printf("payload_length = %ld\n", strlen(payload));
     while (headerSize + strlen(payload) > BUFF_SIZE - 1) {
-        printf("payload_length = %ld\n", strlen(payload));
         memset(buff, 0, BUFF_SIZE);
-        printf("payload_length = %ld\n", strlen(payload));
         char payloadSubstring[BUFF_SIZE - headerSize];
-        printf("payload_length = %ld\n", strlen(payload));
         strncpy(payloadSubstring, payload, BUFF_SIZE - 1 - headerSize);
-        printf("payload_length = %ld\n", strlen(payload));
         sprintf(buff, "%s %s %ld\n%s", messageType, "M", strlen(payloadSubstring), payloadSubstring);
-        printf("payload_length = %ld\n", strlen(payload));
-        printf("msg = %s\n", buff);
-        printf("payload_length = %ld\n", strlen(payload));
 
         bytesSent = send(clientSocket, buff, strlen(buff), 0);
-        printf("payload_length = %ld\n", strlen(payload));
         if (bytesSent < 0) {
             return 0;
         }
-        printf("payload_length = %ld\n", strlen(payload));
 
         payload = payload + (BUFF_SIZE - 1 - headerSize);
-        printf("payload_length = %ld\n", strlen(payload));
     }
 
     memset(buff, 0, BUFF_SIZE);
@@ -147,6 +137,44 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
     return 1;
 }
 
+char *encodeMD5(const char *input) {
+    MD5_CTX md5Context;
+    MD5_Init(&md5Context);
+    MD5_Update(&md5Context, input, strlen(input));
+
+    unsigned char md5_result[MD5_DIGEST_LENGTH];
+    MD5_Final(md5_result, &md5Context);
+
+    char *md5_string = (char *) malloc(2 * MD5_DIGEST_LENGTH + 1);
+
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+        sprintf(&md5_string[i * 2], "%02x", md5_result[i]);
+    }
+
+    md5_string[2 * MD5_DIGEST_LENGTH] = '\0';
+
+    return md5_string;
+}
+
+string generateGameId() {
+    string id;
+    string pool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                  "abcdefghijklmnopqrstuvwxyz"
+                  "0123456789";
+
+    do {
+        id = "";
+        srand(time(NULL));
+        for (int i = 0; i < 16; i++) {
+            id += pool[rand() % pool.size()];
+        }
+    } while (doesGameIdExist(id));
+
+    printf("Generate new id: %s\n", id.c_str());
+
+    return id;
+}
+
 void getGameResult(char *buff, GoGame *game) {
     game->calculateScore();
 
@@ -178,23 +206,27 @@ string calculateRankType(int elo) {
     return "9P";
 }
 
-void updateRanking(GoGame *game, Account *p1, Account *p2) {
+void updatePlayerRankings(GoGame *game, Account *p1, Account *p2) {
     double S1 = (p1->id == game->getBlackPlayerId() && game->getBlackScore() > game->getWhiteScore())
                 || (p1->id == game->getWhitePlayerId() && game->getWhiteScore() > game->getBlackScore())
                 ? 1 : 0;
     double SE1 = 1.0 / (1.0 + exp((p2->elo - p1->elo) / 110));
-    double K1 = -53 / 1300 * p1->elo + 1561 / 13;
-    p1->elo += K1 * (S1 - SE1);
+    double K1 = -53.0 / 1300 * p1->elo + 1561.0 / 13;
+    int elo1_old = p1->elo;
+    p1->elo = (int) round(p1->elo + K1 * (S1 - SE1));
     p1->rankType = calculateRankType(p1->elo);
 
     double S2 = 1 - S1;
     double SE2 = 1 - SE1;
-    double K2 = -53 / 1300 * p2->elo + 1561 / 13;
-    p2->elo += K2 * (S2 - SE2);
+    double K2 = -53.0 / 1300 * p2->elo + 1561.0 / 13;
+    int elo2_old = p2->elo;
+    p2->elo = (int) round(p2->elo + K2 * (S2 - SE2));
     p2->rankType = calculateRankType(p2->elo);
 
-    handleUpdateRanking(*p1);
-    handleUpdateRanking(*p2);
+    printf("R1 = %d + %.2f (%.2f - %.2f) = %d\n", elo1_old, K1, S1, SE1, p1->elo);
+    printf("R2 = %d + %.2f (%.2f - %.2f) = %d\n", elo2_old, K2, S2, SE2, p2->elo);
+    updateRanking(*p1);
+    updateRanking(*p2);
 }
 
 void sendComputerMove(ClientInfo *player, GoGame *game, int color) {
@@ -218,8 +250,8 @@ void sendComputerMove(ClientInfo *player, GoGame *game, int color) {
         if (game->pass(color) == 2) {
             getGameResult(buff, game);
             handleSend(player->socket, "RESULT", buff);
-            handleSaveGame(game);
-            updateRanking(game, player->account, cpu);
+            saveGame(game);
+            updatePlayerRankings(game, player->account, cpu);
 
             for (ClientInfo *client: clients) {
                 if (client->socket == player->socket) {
@@ -247,11 +279,10 @@ void generateMatches(int number) {
             move = game->generateMove(color);
             if (move == "PA") {
                 int p = game->pass(color);
-                printf("Pass count = %d\n", p);
                 if (p == 2) {
                     game->calculateScore();
-                    handleSaveGame(game);
-                    updateRanking(game, players[0], players[1]);
+                    saveGame(game);
+                    updatePlayerRankings(game, players[0], players[1]);
                     printf("%.1f %.1f\n", game->getBlackScore(), game->getWhiteScore());
                     break;
                 }
@@ -275,33 +306,52 @@ void *handleRequest(void *arg) {
 
         // Register account
         if (strcmp(messageType, "REGIST") == 0) {
-            int res = handleCreateAccount(payload);
-            switch (res) {
-                case 0:
-                    handleSend(clientSocket, "OK", "Account created successfully");
-                    break;
-                case 1:
-                    handleSend(clientSocket, "ERROR", "Username already used");
-                    break;
+            char *username = strtok(payload, "\n");
+            char *password = strtok(NULL, "\n");
+
+            if (findAccount(username) != NULL) {
+                handleSend(clientSocket, "ERROR", "Username already used");
+                continue;
             }
+
+            Account account;
+            account.username = username;
+            account.password = encodeMD5(password);
+
+            createAccount(account);
+            handleSend(clientSocket, "OK", "Account created successfully");
+            continue;
         }
 
-            // Login account
-        else if (strcmp(messageType, "LOGIN") == 0) {
-            Account *account = handleSignIn(payload);
+        // Login account
+        if (strcmp(messageType, "LOGIN") == 0) {
+            char *username = strtok(payload, "\n");
+            char *password = strtok(NULL, "\n");
+
+            Account *account = findAccount(username);
             if (account == NULL) {
                 handleSend(clientSocket, "ERROR", "Wrong username or password");
-            } else {
-                handleSend(clientSocket, "OK", "Signed in successfully");
-
-                thisClient = new ClientInfo(clientSocket, account, 0);
-                clients.insert(thisClient);
-                notifyOnlineStatusChange();
+                continue;
             }
+
+            string passwordHash = encodeMD5(password);
+            if (passwordHash != account->password) {
+                handleSend(clientSocket, "ERROR", "Wrong username or password");
+                continue;
+            }
+
+            account->password = "";
+
+            handleSend(clientSocket, "OK", "Signed in successfully");
+
+            thisClient = new ClientInfo(clientSocket, account, 0);
+            clients.insert(thisClient);
+            notifyOnlineStatusChange();
+            continue;
         }
 
-            // Get online player list
-        else if (strcmp(messageType, "LSTONL") == 0) {
+        // Get online player list
+        if (strcmp(messageType, "LSTONL") == 0) {
             payload[0] = '\0';
             char content[BUFF_SIZE];
 
@@ -323,7 +373,7 @@ void *handleRequest(void *arg) {
         }
 
             // Invite other player
-        else if (strcmp(messageType, "INVITE") == 0) {
+        if (strcmp(messageType, "INVITE") == 0) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
 
@@ -444,14 +494,14 @@ void *handleRequest(void *arg) {
             } else {
                 if (game->pass(color) == 2) {
                     getGameResult(buff, game);
-                    handleSaveGame(game);
+                    saveGame(game);
 
                     handleSend(clientSocket, "RESULT", buff);
                     if (opponentClient != NULL) {
                         handleSend(opponentClient->socket, "RESULT", buff);
-                        updateRanking(game, thisClient->account, opponentClient->account);
+                        updatePlayerRankings(game, thisClient->account, opponentClient->account);
                     } else {
-                        updateRanking(game, thisClient->account, cpu);
+                        updatePlayerRankings(game, thisClient->account, cpu);
                     }
                 } else {
                     if (opponentClient == NULL) {
@@ -469,8 +519,8 @@ void *handleRequest(void *arg) {
 
                             getGameResult(buff, game);
                             handleSend(clientSocket, "RESULT", buff);
-                            handleSaveGame(game);
-                            updateRanking(game, thisClient->account, cpu);
+                            saveGame(game);
+                            updatePlayerRankings(game, thisClient->account, cpu);
                             continue;
                         }
                         sendComputerMove(thisClient, game, 3 - color);
@@ -507,12 +557,12 @@ void *handleRequest(void *arg) {
                 handleSend(clientSocket, "RESULT", buff);
                 if (opponentClient != NULL) {
                     handleSend(opponentClient->socket, "RESULT", buff);
-                    updateRanking(game, thisClient->account, opponentClient->account);
+                    updatePlayerRankings(game, thisClient->account, opponentClient->account);
                 } else {
-                    updateRanking(game, thisClient->account, cpu);
+                    updatePlayerRankings(game, thisClient->account, cpu);
                 }
 
-                handleSaveGame(game);
+                saveGame(game);
             }
         }
 
@@ -526,7 +576,7 @@ void *handleRequest(void *arg) {
 
             // Get history of played games
         else if (strcmp(messageType, "HISTRY") == 0) {
-            vector < GameRecord * > games = handleGetHistory(thisClient->account->id);
+            vector < GameRecord * > games = findGamesByPlayer(thisClient->account->id);
             memset(payload, 0, 16 * BUFF_SIZE);
             memset(buff, 0, BUFF_SIZE);
             for (const GameRecord *game: games) {
@@ -543,7 +593,7 @@ void *handleRequest(void *arg) {
         else if (strcmp(messageType, "REPLAY") == 0) {
             char *id = strtok(payload, "\n");
             printf("id = %s\n", id);
-            GameReplay *replay = handleGetReplay(id);
+            GameReplay *replay = getGameReplayInfo(id);
             printf("replay = %p\n", replay);
             const char *data = (string(payload) + "\n" + replay->log + "\n" + replay->blackTerritory + " \n" +
                                 replay->whiteTerritory +
@@ -552,10 +602,24 @@ void *handleRequest(void *arg) {
             handleSend(clientSocket, "REPLAY", data);
             printf("data = %p\n", data);
         }
+
+            // Get rankings
+        else if (strcmp(messageType, "RANKIN") == 0) {
+            vector <pair<int, Account *>> rankings = getRankings();
+            string data = "";
+            for (auto r: rankings) {
+                data += to_string(r.first) + " " +
+                        r.second->username + " " +
+                        to_string(r.second->elo) + " " +
+                        r.second->rankType + "\n";
+            }
+            handleSend(clientSocket, "RANKIN", data.c_str());
+        }
     }
 
     close(clientSocket);
-    return NULL;
+    return
+            NULL;
 }
 
 #endif //GAME_OF_GO_SERVER_CONTROLLER_HPP
