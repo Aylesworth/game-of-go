@@ -41,8 +41,16 @@ struct ClientInfo {
 set<ClientInfo *> clients;
 Account *cpu = findAccount("@CPU");
 
-map<int, GoGame *>
-        games;
+struct Context {
+    ClientInfo *selfInfo;
+    ClientInfo *opponentInfo;
+    GoGame *game;
+};
+
+map<int, Context> ctx;
+
+//map<int, GoGame *>
+//        games;
 
 ClientInfo *findClientByUsername(string username) {
     for (const auto &client: clients) {
@@ -59,17 +67,21 @@ void notifyOnlineStatusChange() {
     }
 }
 
-void handleClientDisconnect(int clientSocket) {
+void handleClientDisconnect(int sock) {
     for (auto it = clients.begin(); it != clients.end(); it++) {
-        if ((*it)->socket == clientSocket) {
+        if ((*it)->socket == sock) {
             clients.erase(it);
             notifyOnlineStatusChange();
             return;
         }
     }
+
+    ctx[sock].selfInfo = NULL;
+    ctx[sock].opponentInfo = NULL;
+    ctx[sock].game = NULL;
 }
 
-int handleSend(int clientSocket, const char *messageType, const char *payload) {
+int handleSend(int sock, const char *messageType, const char *payload) {
     char buff[BUFF_SIZE];
     int bytesSent;
     int blockTypeSize = 1;
@@ -82,7 +94,7 @@ int handleSend(int clientSocket, const char *messageType, const char *payload) {
         strncpy(payloadSubstring, payload, BUFF_SIZE - 1 - headerSize);
         sprintf(buff, "%s %s %ld\n%s", messageType, "M", strlen(payloadSubstring), payloadSubstring);
 
-        bytesSent = send(clientSocket, buff, strlen(buff), 0);
+        bytesSent = send(sock, buff, strlen(buff), 0);
         if (bytesSent < 0) {
             return 0;
         }
@@ -92,13 +104,13 @@ int handleSend(int clientSocket, const char *messageType, const char *payload) {
 
     memset(buff, 0, BUFF_SIZE);
     sprintf(buff, "%s %s %ld\n%s", messageType, "L", strlen(payload), payload);
-    bytesSent = send(clientSocket, buff, strlen(buff), 0);
-    printf("Sent to %d:\n%s\n", clientSocket, buff);
+    bytesSent = send(sock, buff, strlen(buff), 0);
+    printf("Sent to %d:\n%s\n", sock, buff);
 
     return 1;
 }
 
-int handleReceive(int clientSocket, char *messageType, char *payload) {
+int handleReceive(int sock, char *messageType, char *payload) {
     char buff[BUFF_SIZE];
     char *blockType;
     payload[0] = '\0';
@@ -106,14 +118,14 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
     memset(payload, 0, 16 * BUFF_SIZE);
     do {
         memset(buff, 0, BUFF_SIZE);
-        int bytesReceived = recv(clientSocket, buff, BUFF_SIZE - 1, 0);
+        int bytesReceived = recv(sock, buff, BUFF_SIZE - 1, 0);
         if (bytesReceived <= 0) {
-            printf("Socket %d closed.\n", clientSocket);
-            handleClientDisconnect(clientSocket);
+            printf("Socket %d closed.\n", sock);
+            handleClientDisconnect(sock);
             return 0;
         }
 
-        printf("Received from %d:\n%s\n", clientSocket, buff);
+        printf("Received from %d:\n%s\n", sock, buff);
 
         int headerEndIndex = strcspn(buff, "\n");
         buff[headerEndIndex] = '\0';
@@ -123,17 +135,11 @@ int handleReceive(int clientSocket, char *messageType, char *payload) {
 
         blockType = strtok(NULL, " ");
 
-//        printf("messageType = %s\n", messageType);
-//        printf("blockType = %s\n", blockType);
         if (buff[headerEndIndex + 1] != '\0')
             strcat(payload, buff + headerEndIndex + 1);
-//        printf("payload = %s\n", payload);
     } while (strcmp(blockType, "L") != 0);
 
     strcat(payload, "\0");
-
-//    printf("messageType = %s\n", messageType);
-//    printf("payload = %s\n", payload);
     return 1;
 }
 
@@ -161,7 +167,6 @@ string generateGameId() {
     string pool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                   "abcdefghijklmnopqrstuvwxyz"
                   "0123456789";
-
     do {
         id = "";
         srand(time(NULL));
@@ -296,13 +301,13 @@ void generateMatches(int number) {
 void *handleRequest(void *arg) {
     pthread_detach(pthread_self());
 
-    int clientSocket = *(int *) arg;
-    ClientInfo *thisClient;
-    ClientInfo *opponentClient;
+    int sock = *(int *) arg;
+//    ClientInfo *ctx[sock].selfInfo;
+//    ClientInfo *ctx[sock].opponentInfo;
     char messageType[10], payload[16 * BUFF_SIZE];
     char buff[BUFF_SIZE];
 
-    while (handleReceive(clientSocket, messageType, payload)) {
+    while (handleReceive(sock, messageType, payload)) {
 
         // Register account
         if (strcmp(messageType, "REGIST") == 0) {
@@ -310,7 +315,7 @@ void *handleRequest(void *arg) {
             char *password = strtok(NULL, "\n");
 
             if (findAccount(username) != NULL) {
-                handleSend(clientSocket, "ERROR", "Username already used");
+                handleSend(sock, "ERROR", "Username already used");
                 continue;
             }
 
@@ -319,7 +324,7 @@ void *handleRequest(void *arg) {
             account.password = encodeMD5(password);
 
             createAccount(account);
-            handleSend(clientSocket, "OK", "Account created successfully");
+            handleSend(sock, "OK", "Account created successfully");
             continue;
         }
 
@@ -330,22 +335,23 @@ void *handleRequest(void *arg) {
 
             Account *account = findAccount(username);
             if (account == NULL) {
-                handleSend(clientSocket, "ERROR", "Wrong username or password");
+                handleSend(sock, "ERROR", "Wrong username or password");
                 continue;
             }
 
             string passwordHash = encodeMD5(password);
             if (passwordHash != account->password) {
-                handleSend(clientSocket, "ERROR", "Wrong username or password");
+                handleSend(sock, "ERROR", "Wrong username or password");
                 continue;
             }
 
             account->password = "";
 
-            handleSend(clientSocket, "OK", "Signed in successfully");
+            handleSend(sock, "OK", "Signed in successfully");
 
-            thisClient = new ClientInfo(clientSocket, account, 0);
-            clients.insert(thisClient);
+            ClientInfo *info = new ClientInfo(sock, account, 0);
+            ctx[sock].selfInfo = info;
+            clients.insert(info);
             notifyOnlineStatusChange();
             continue;
         }
@@ -356,7 +362,7 @@ void *handleRequest(void *arg) {
             char content[BUFF_SIZE];
 
             for (const auto &client: clients) {
-                if (client->account->username == thisClient->account->username) continue;
+                if (client->account->username == ctx[sock].selfInfo->account->username) continue;
 
                 char status[20];
                 if (client->status == 0) {
@@ -369,101 +375,103 @@ void *handleRequest(void *arg) {
                 strcat(payload, content);
             }
 
-            handleSend(clientSocket, "LSTONL", payload);
+            handleSend(sock, "LSTONL", payload);
+            continue;
         }
 
-            // Invite other player
+        // Invite other player
         if (strcmp(messageType, "INVITE") == 0) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
 
             if (strcmp(opponent, "@CPU") == 0) {
-                opponentClient = NULL;
+                ctx[sock].opponentInfo = NULL;
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%s\n%d\n%s\n", "@CPU", boardSize, "ACCEPT");
-                handleSend(clientSocket, "INVRES", buff);
+                handleSend(sock, "INVRES", buff);
 
-                printf("Establish game between %s and %s\n", thisClient->account->username.c_str(), "@CPU");
+                printf("Establish game between %s and %s\n", ctx[sock].selfInfo->account->username.c_str(), "@CPU");
 
-                thisClient->status = 1;
+                ctx[sock].selfInfo->status = 1;
                 notifyOnlineStatusChange();
 
                 GoGame *game = new GoGame(boardSize);
                 game->setId(generateGameId());
-                games[clientSocket] = game;
+                ctx[sock].game = game;
 
                 srand(time(NULL));
                 int randomColor = rand() % 2 + 1;
 
-                game->setBlackPlayerId(randomColor == 1 ? thisClient->account->id : -1);
-                game->setWhitePlayerId(randomColor == 1 ? -1 : thisClient->account->id);
+                game->setBlackPlayerId(randomColor == 1 ? ctx[sock].selfInfo->account->id : -1);
+                game->setWhitePlayerId(randomColor == 1 ? -1 : ctx[sock].selfInfo->account->id);
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%d\n%d\n", boardSize, randomColor);
-                handleSend(clientSocket, "SETUP", buff);
+                handleSend(sock, "SETUP", buff);
 
                 if (randomColor != 1) {
                     usleep(100000);
-                    sendComputerMove(thisClient, game, 3 - randomColor);
+                    sendComputerMove(ctx[sock].selfInfo, game, 3 - randomColor);
                 }
 
                 continue;
             }
 
-            opponentClient = findClientByUsername(opponent);
+            ctx[sock].opponentInfo = findClientByUsername(opponent);
 
             memset(buff, 0, BUFF_SIZE);
-            sprintf(buff, "%s\n%d\n", thisClient->account->username.c_str(), boardSize);
-            handleSend(opponentClient->socket, "INVITE", buff);
-
+            sprintf(buff, "%s\n%d\n", ctx[sock].selfInfo->account->username.c_str(), boardSize);
+            handleSend(ctx[sock].opponentInfo->socket, "INVITE", buff);
+            continue;
         }
 
-            // Reply to invitation
-        else if (strcmp(messageType, "INVRES") == 0) {
+        // Reply to invitation
+        if (strcmp(messageType, "INVRES") == 0) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
             char *reply = strtok(NULL, "\n");
-            opponentClient = findClientByUsername(opponent);
+            ctx[sock].opponentInfo = findClientByUsername(opponent);
 
             memset(buff, 0, BUFF_SIZE);
-            sprintf(buff, "%s\n%d\n%s\n", thisClient->account->username.c_str(), boardSize, reply);
-            handleSend(opponentClient->socket, "INVRES", buff);
+            sprintf(buff, "%s\n%d\n%s\n", ctx[sock].selfInfo->account->username.c_str(), boardSize, reply);
+            handleSend(ctx[sock].opponentInfo->socket, "INVRES", buff);
 
             if (strcmp(reply, "ACCEPT") == 0) {
-                printf("Establish game between %s and %s\n", thisClient->account->username.c_str(), opponent);
+                printf("Establish game between %s and %s\n", ctx[sock].selfInfo->account->username.c_str(), opponent);
 
-                thisClient->status = 1;
-                opponentClient->status = 1;
+                ctx[sock].selfInfo->status = 1;
+                ctx[sock].opponentInfo->status = 1;
                 notifyOnlineStatusChange();
 
                 GoGame *game = new GoGame(boardSize);
                 game->setId(generateGameId());
 
-                games[clientSocket] = game;
-                games[opponentClient->socket] = game;
+                ctx[sock].game = game;
+                ctx[ctx[sock].opponentInfo->socket].game = game;
 
                 srand(time(NULL));
                 int randomColor = rand() % 2 + 1;
 
-                game->setBlackPlayerId(randomColor == 1 ? thisClient->account->id : opponentClient->account->id);
-                game->setWhitePlayerId(randomColor == 1 ? opponentClient->account->id : thisClient->account->id);
+                game->setBlackPlayerId(randomColor == 1 ? ctx[sock].selfInfo->account->id : ctx[sock].opponentInfo->account->id);
+                game->setWhitePlayerId(randomColor == 1 ? ctx[sock].opponentInfo->account->id : ctx[sock].selfInfo->account->id);
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%d\n%d\n", boardSize, randomColor);
-                handleSend(clientSocket, "SETUP", buff);
+                handleSend(sock, "SETUP", buff);
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%d\n%d\n", boardSize, 3 - randomColor);
-                handleSend(opponentClient->socket, "SETUP", buff);
+                handleSend(ctx[sock].opponentInfo->socket, "SETUP", buff);
             } else {
-                opponentClient = NULL;
+                ctx[sock].opponentInfo = NULL;
             }
+            continue;
         }
 
-            // Make a move
-        else if (strcmp(messageType, "MOVE") == 0) {
-            GoGame *game = games[clientSocket];
+        // Make a move
+        if (strcmp(messageType, "MOVE") == 0) {
+            GoGame *game = ctx[sock].game;
 
             int color = atoi(strtok(payload, "\n"));
             char *coords = strtok(NULL, "\n");
@@ -481,30 +489,30 @@ void *handleRequest(void *arg) {
                         strcat(buff, "\n");
                     }
 
-                    handleSend(clientSocket, "MOVE", buff);
-                    if (opponentClient != NULL) {
+                    handleSend(sock, "MOVE", buff);
+                    if (ctx[sock].opponentInfo != NULL) {
                         usleep(10000);
-                        handleSend(opponentClient->socket, "MOVE", buff);
+                        handleSend(ctx[sock].opponentInfo->socket, "MOVE", buff);
                     } else {
-                        sendComputerMove(thisClient, game, 3 - color);
+                        sendComputerMove(ctx[sock].selfInfo, game, 3 - color);
                     }
                 } else {
-                    handleSend(clientSocket, "MOVERR", "");
+                    handleSend(sock, "MOVERR", "");
                 }
             } else {
                 if (game->pass(color) == 2) {
                     getGameResult(buff, game);
                     saveGame(game);
 
-                    handleSend(clientSocket, "RESULT", buff);
-                    if (opponentClient != NULL) {
-                        handleSend(opponentClient->socket, "RESULT", buff);
-                        updatePlayerRankings(game, thisClient->account, opponentClient->account);
+                    handleSend(sock, "RESULT", buff);
+                    if (ctx[sock].opponentInfo != NULL) {
+                        handleSend(ctx[sock].opponentInfo->socket, "RESULT", buff);
+                        updatePlayerRankings(game, ctx[sock].selfInfo->account, ctx[sock].opponentInfo->account);
                     } else {
-                        updatePlayerRankings(game, thisClient->account, cpu);
+                        updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
                     }
                 } else {
-                    if (opponentClient == NULL) {
+                    if (ctx[sock].opponentInfo == NULL) {
                         game->calculateScore();
                         float blackScore = game->getBlackScore();
                         float whiteScore = game->getWhiteScore();
@@ -515,36 +523,37 @@ void *handleRequest(void *arg) {
 
                             memset(buff, 0, BUFF_SIZE);
                             sprintf(buff, "%d\n%s\n", 3 - color, "PA");
-                            handleSend(clientSocket, "MOVE", buff);
+                            handleSend(sock, "MOVE", buff);
 
                             getGameResult(buff, game);
-                            handleSend(clientSocket, "RESULT", buff);
+                            handleSend(sock, "RESULT", buff);
                             saveGame(game);
-                            updatePlayerRankings(game, thisClient->account, cpu);
+                            updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
                             continue;
                         }
-                        sendComputerMove(thisClient, game, 3 - color);
+                        sendComputerMove(ctx[sock].selfInfo, game, 3 - color);
                         continue;
                     }
                     memset(buff, 0, BUFF_SIZE);
                     sprintf(buff, "%d\n%s\n", color, coords);
-                    handleSend(opponentClient->socket, "MOVE", buff);
+                    handleSend(ctx[sock].opponentInfo->socket, "MOVE", buff);
                 }
             }
+            continue;
         }
 
-            // Request game interrupt
-        else if (strcmp(messageType, "INTRPT") == 0) {
-            GoGame *game = games[clientSocket];
+        // Request game interrupt
+        if (strcmp(messageType, "INTRPT") == 0) {
+            GoGame *game = ctx[sock].game;
 
             int color = atoi(strtok(payload, "\n"));
             char *interruptType = strtok(NULL, "\n");
 
             if (strcmp(interruptType, "RESIGN") == 0) {
-                if (opponentClient != NULL) {
+                if (ctx[sock].opponentInfo != NULL) {
                     memset(buff, 0, BUFF_SIZE);
                     sprintf(buff, "%d\nRESIGN\n", color);
-                    handleSend(opponentClient->socket, "INTRPT", buff);
+                    handleSend(ctx[sock].opponentInfo->socket, "INTRPT", buff);
                 }
 
                 game->resign(color);
@@ -554,29 +563,32 @@ void *handleRequest(void *arg) {
                         game->getBlackTerritory().c_str(), game->getWhiteTerritory().c_str());
 
                 usleep(10000);
-                handleSend(clientSocket, "RESULT", buff);
-                if (opponentClient != NULL) {
-                    handleSend(opponentClient->socket, "RESULT", buff);
-                    updatePlayerRankings(game, thisClient->account, opponentClient->account);
+                handleSend(sock, "RESULT", buff);
+                if (ctx[sock].opponentInfo != NULL) {
+                    handleSend(ctx[sock].opponentInfo->socket, "RESULT", buff);
+                    updatePlayerRankings(game, ctx[sock].selfInfo->account, ctx[sock].opponentInfo->account);
                 } else {
-                    updatePlayerRankings(game, thisClient->account, cpu);
+                    updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
                 }
 
                 saveGame(game);
             }
+
+            continue;
         }
 
-            // Confirm game result
-        else if (strcmp(messageType, "RESACK") == 0) {
-            thisClient->status = 0;
-            opponentClient = NULL;
-            games[clientSocket] = NULL;
+        // Confirm game result
+        if (strcmp(messageType, "RESACK") == 0) {
+            ctx[sock].selfInfo->status = 0;
+            ctx[sock].opponentInfo = NULL;
+            ctx[sock].game = NULL;
             notifyOnlineStatusChange();
+            continue;
         }
 
-            // Get history of played games
-        else if (strcmp(messageType, "HISTRY") == 0) {
-            vector < GameRecord * > games = findGamesByPlayer(thisClient->account->id);
+        // Get history of played games
+        if (strcmp(messageType, "HISTRY") == 0) {
+            vector < GameRecord * > games = findGamesByPlayer(ctx[sock].selfInfo->account->id);
             memset(payload, 0, 16 * BUFF_SIZE);
             memset(buff, 0, BUFF_SIZE);
             for (const GameRecord *game: games) {
@@ -586,11 +598,12 @@ void *handleRequest(void *arg) {
                 strcat(payload, buff);
             }
             strcat(payload, "\0");
-            handleSend(clientSocket, "HISTRY", payload);
+            handleSend(sock, "HISTRY", payload);
+            continue;
         }
 
-            // Get game replay
-        else if (strcmp(messageType, "REPLAY") == 0) {
+        // Get game replay
+        if (strcmp(messageType, "REPLAY") == 0) {
             char *id = strtok(payload, "\n");
             printf("id = %s\n", id);
             GameReplay *replay = getGameReplayInfo(id);
@@ -599,12 +612,13 @@ void *handleRequest(void *arg) {
                                 replay->whiteTerritory +
                                 " \n").c_str();
             printf("data = %p\n", data);
-            handleSend(clientSocket, "REPLAY", data);
+            handleSend(sock, "REPLAY", data);
             printf("data = %p\n", data);
+            continue;
         }
 
-            // Get rankings
-        else if (strcmp(messageType, "RANKIN") == 0) {
+        // Get rankings
+        if (strcmp(messageType, "RANKIN") == 0) {
             vector <pair<int, Account *>> rankings = getRankings();
             string data = "";
             for (auto r: rankings) {
@@ -613,13 +627,13 @@ void *handleRequest(void *arg) {
                         to_string(r.second->elo) + " " +
                         r.second->rankType + "\n";
             }
-            handleSend(clientSocket, "RANKIN", data.c_str());
+            handleSend(sock, "RANKIN", data.c_str());
+            continue;
         }
     }
 
-    close(clientSocket);
-    return
-            NULL;
+    close(sock);
+    return NULL;
 }
 
 #endif //GAME_OF_GO_SERVER_CONTROLLER_HPP
