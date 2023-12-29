@@ -289,7 +289,6 @@ public:
         int col = colSymbol - 'A' + 1;
         if (colSymbol >= 'J') col--;
         int row = stoi(coords.substr(1));
-
         int pos = row * boardRange + col;
 
         if (canMove(pos, color)) {
@@ -346,6 +345,9 @@ public:
         int surround = 0;
         int pattern = 0;
 
+        vector<int> candidates;
+        srand(time(NULL));
+
         // capture opponent's group
         for (int pos = 0; pos < board.size(); pos++) {
             int piece = board[pos];
@@ -356,12 +358,16 @@ public:
                     restoreBoard();
                     if (canMove(targetPos, color)) {
                         bestMove = targetPos;
-                        capture = targetPos;
+                        candidates.push_back(targetPos);
                         break;
                     }
                 }
                 restoreBoard();
             }
+        }
+        if (candidates.size() > 0) {
+            capture = candidates[rand() % candidates.size()];
+            candidates.clear();
         }
 
         // save own group
@@ -374,12 +380,16 @@ public:
                     restoreBoard();
                     if (canMove(targetPos, color) && libertiesIfPut(targetPos, color) > 1) {
                         bestMove = targetPos;
-                        save = targetPos;
+                        candidates.push_back(targetPos);
                         break;
                     }
                 }
                 restoreBoard();
             }
+        }
+        if (candidates.size() > 0) {
+            save = candidates[rand() % candidates.size()];
+            candidates.clear();
         }
 
         // defend own group
@@ -392,12 +402,16 @@ public:
                     restoreBoard();
                     if (canMove(bestLiberty, color) && libertiesIfPut(bestLiberty, color) > 1) {
                         bestMove = bestLiberty;
-                        defend = bestLiberty;
+                        candidates.push_back(bestLiberty);
                         break;
                     }
                 }
                 restoreBoard();
             }
+        }
+        if (candidates.size() > 0) {
+            defend = candidates[rand() % candidates.size()];
+            candidates.clear();
         }
 
         // surround opponent's group
@@ -410,12 +424,16 @@ public:
                     restoreBoard();
                     if (canMove(bestLiberty, color) && libertiesIfPut(bestLiberty, color) > 1) {
                         bestMove = bestLiberty;
-                        surround = bestLiberty;
+                        candidates.push_back(bestLiberty);
                         break;
                     }
                 }
                 restoreBoard();
             }
+        }
+        if (candidates.size() > 0) {
+            surround = candidates[rand() % candidates.size()];
+            candidates.clear();
         }
 
         // pattern matching
@@ -428,49 +446,54 @@ public:
                 targetTwo = pos - boardRange - 1;
                 if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - boardRange, color)) {
                     bestMove = pos - boardRange;
-                    pattern = bestMove;
+                    candidates.push_back(bestMove);
                 }
 
                 targetOne = pos + 1;
                 targetTwo = pos - boardRange - 1;
                 if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - boardRange, color)) {
                     bestMove = pos - boardRange;
-                    pattern = bestMove;
+                    candidates.push_back(bestMove);
                 }
 
                 targetOne = pos + 1;
                 targetTwo = pos - 1;
                 if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos + boardRange, color)) {
                     bestMove = pos + boardRange;
-                    pattern = bestMove;
+                    candidates.push_back(bestMove);
                 }
 
                 targetOne = pos - boardRange + 2;
                 targetTwo = pos - boardRange - 1;
                 if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - boardRange, color)) {
                     bestMove = pos - boardRange;
-                    pattern = bestMove;
+                    candidates.push_back(bestMove);
                 }
 
                 targetOne = pos - boardRange + 2;
                 targetTwo = pos - boardRange - 2;
                 if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - boardRange, color)) {
                     bestMove = pos - boardRange;
-                    pattern = bestMove;
+                    candidates.push_back(bestMove);
                 }
 
                 targetOne = pos - 1;
                 targetTwo = pos + boardRange - 2;
                 if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos + boardRange, color)) {
                     bestMove = pos + boardRange;
-                    pattern = bestMove;
+                    candidates.push_back(bestMove);
                 }
 
                 targetOne = pos - boardRange;
                 targetTwo = pos - boardRange - 2;
                 if ((board[targetOne] & color) && (board[targetTwo] & color) && canMove(pos - 1, color)) {
                     bestMove = pos - 1;
-                    pattern = bestMove;
+                    candidates.push_back(bestMove);
+                }
+
+                if (candidates.size() > 0) {
+                    pattern = candidates[rand() % candidates.size()];
+                    candidates.clear();
                 }
             }
         }

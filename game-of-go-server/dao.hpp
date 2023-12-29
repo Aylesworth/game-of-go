@@ -174,4 +174,66 @@ GameReplay *getGameReplayInfo(string gameId) {
     return NULL;
 }
 
+Stats *getStatsOfPlayer(int playerId) {
+    int totalMatches, wins, losses;
+    double winningRate;
+    int elo;
+    string rankType;
+    int ranking;
+
+    // Get total matches
+    auto pstmt = con->prepareStatement(
+            "SELECT COUNT(id) AS total_matches FROM game "
+            "WHERE black_player = ? OR white_player = ?"
+    );
+    pstmt->setInt(1, playerId);
+    pstmt->setInt(2, playerId);
+    auto rs = pstmt->executeQuery();
+    if (rs->next()) {
+        totalMatches = rs->getInt("total_matches");
+    } else return NULL;
+
+    // Get wins and losses
+    pstmt = con->prepareStatement(
+            "SELECT COUNT(id) AS total_matches FROM game "
+            "WHERE (black_player = ? AND black_score > white_score) "
+            "OR (white_player = ? AND white_score > black_score)"
+    );
+    pstmt->setInt(1, playerId);
+    pstmt->setInt(2, playerId);
+    rs = pstmt->executeQuery();
+    if (rs->next()) {
+        wins = rs->getInt("total_matches");
+        losses = totalMatches - wins;
+    } else return NULL;
+
+    winningRate = 1.0 * wins / totalMatches;
+
+    // Get ELO rating and rank type
+    pstmt = con->prepareStatement(
+            "SELECT elo, rank_type FROM account "
+            "WHERE id = ?"
+    );
+    pstmt->setInt(1, playerId);
+    rs = pstmt->executeQuery();
+    if (rs->next()) {
+        elo = rs->getInt("elo");
+        rankType = rs->getString("rank_type");
+    } else return NULL;
+
+    // Get ranking
+    pstmt = con->prepareStatement(
+            "SELECT ranking FROM "
+            "(SELECT DENSE_RANK() OVER (ORDER BY elo DESC) AS ranking, id FROM account) AS rankings "
+            "WHERE id = ?"
+    );
+    pstmt->setInt(1, playerId);
+    rs = pstmt->executeQuery();
+    if (rs->next()) {
+        ranking = rs->getInt("ranking");
+    } else return NULL;
+
+    return new Stats(totalMatches, wins, losses, winningRate, elo, rankType, ranking);
+}
+
 #endif

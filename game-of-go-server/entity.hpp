@@ -1,7 +1,7 @@
 #ifndef ENTITY_HPP
 #define ENTITY_HPP
 
-#include<string>
+#include <string>
 
 #define MAX 255
 using namespace std;
@@ -45,6 +45,22 @@ struct GameReplay {
 
     GameReplay(string log, string blackTerritory, string whiteTerritory) :
             log(log), blackTerritory(blackTerritory), whiteTerritory(whiteTerritory) {}
+};
+
+struct Stats {
+    int totalMatches;
+    int wins;
+    int losses;
+    double winningRate;
+    int elo;
+    string rankType;
+    int ranking;
+
+    Stats() {}
+
+    Stats(int totalMatches, int wins, int losses, double winningRate, int elo, string rankType, int ranking) :
+            totalMatches(totalMatches), wins(wins), losses(losses), winningRate(winningRate),
+            elo(elo), rankType(rankType), ranking(ranking) {}
 };
 
 #endif

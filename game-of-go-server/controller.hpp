@@ -49,9 +49,6 @@ struct Context {
 
 map<int, Context> ctx;
 
-//map<int, GoGame *>
-//        games;
-
 ClientInfo *findClientByUsername(string username) {
     for (const auto &client: clients) {
         if (client->account->username == username) {
@@ -302,13 +299,10 @@ void *handleRequest(void *arg) {
     pthread_detach(pthread_self());
 
     int sock = *(int *) arg;
-//    ClientInfo *ctx[sock].selfInfo;
-//    ClientInfo *ctx[sock].opponentInfo;
     char messageType[10], payload[16 * BUFF_SIZE];
     char buff[BUFF_SIZE];
 
     while (handleReceive(sock, messageType, payload)) {
-
         // Register account
         if (strcmp(messageType, "REGIST") == 0) {
             char *username = strtok(payload, "\n");
@@ -611,9 +605,7 @@ void *handleRequest(void *arg) {
             const char *data = (string(payload) + "\n" + replay->log + "\n" + replay->blackTerritory + " \n" +
                                 replay->whiteTerritory +
                                 " \n").c_str();
-            printf("data = %p\n", data);
             handleSend(sock, "REPLAY", data);
-            printf("data = %p\n", data);
             continue;
         }
 
@@ -629,6 +621,17 @@ void *handleRequest(void *arg) {
             }
             handleSend(sock, "RANKIN", data.c_str());
             continue;
+        }
+
+        // Get stats
+        if (strcmp(messageType, "STATS") == 0) {
+            int playerId = ctx[sock].selfInfo->account->id;
+            Stats *stats = getStatsOfPlayer(playerId);
+            memset(buff, 0, BUFF_SIZE);
+            sprintf(buff, "%d %d %d %.2f%% %d %s %d\n",
+                    stats->totalMatches, stats->wins, stats->losses, stats->winningRate * 100,
+                    stats->elo, stats->rankType.c_str(), stats->ranking);
+            handleSend(sock, "STATS", buff);
         }
     }
 

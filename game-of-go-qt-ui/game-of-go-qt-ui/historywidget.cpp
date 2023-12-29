@@ -20,6 +20,7 @@ HistoryWidget::HistoryWidget(QWidget *parent)
     ui->scrollArea->setWidget(w);
 
     connect(socket, &Socket::messageReceived, this, &HistoryWidget::onMessageReceived);
+    socket->sendMessage("STATS");
     socket->sendMessage("HISTRY");
 }
 
@@ -29,6 +30,18 @@ HistoryWidget::~HistoryWidget()
 }
 
 void HistoryWidget::onMessageReceived(QString msgtype, QString payload) {
+    if (msgtype == "STATS") {
+        QStringList params = payload.split(" ", Qt::SkipEmptyParts);
+        ui->lbl_total->setText(params[0]);
+        ui->lbl_wins->setText(params[1]);
+        ui->lbl_losses->setText(params[2]);
+        ui->lbl_rate->setText(params[3]);
+        ui->lbl_elo->setText(params[4]);
+        ui->lbl_type->setText(params[5]);
+        ui->lbl_ranking->setText(params[6]);
+        return;
+    }
+
     if (msgtype == "HISTRY") {
         QStringList lines = payload.split("\n", Qt::SkipEmptyParts);
         for (QString line: lines) {
@@ -44,6 +57,7 @@ void HistoryWidget::onMessageReceived(QString msgtype, QString payload) {
                 this
             ));
         }
+        return;
     }
 }
 
