@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QCloseEvent>
 #include <QMainWindow>
+#include <QDebug>
 
 ChallengeWindow::ChallengeWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -16,7 +17,7 @@ ChallengeWindow::ChallengeWindow(QWidget *parent)
     socket = Socket::getInstance();
     connect(socket, &Socket::messageReceived, this, &ChallengeWindow::onMessageReceived);
     connect(ui->list_online, &QListWidget::currentTextChanged, this, &ChallengeWindow::onPlayerChanged);
-    connect(MainWindow::getInstance(), &MainWindow::closeChildWindows, this, &ChallengeWindow::hide);
+    connect(MainWindow::getInstance(), SIGNAL(matchSetUp()), this, SLOT(hide()));
     ui->btn_challenge->setDisabled(true);
     socket->sendMessage("LSTONL");
 }
@@ -32,9 +33,10 @@ void ChallengeWindow::onMessageReceived(QString msgtype, QString payload) {
         ui->list_online->clear();
         QStringList entries = payload.split("\n", Qt::SkipEmptyParts);
         for (QString entry: entries) {
-            QString username = entry.section(" ", 0, 0);
-            QString status = entry.section(" ", 1);
-            ui->list_online->addItem(username + " (" + status + ")");
+            // QString username = entry.section(" ", 0, 0);
+            // QString status = entry.section(" ", 1);
+            // ui->list_online->addItem(username + " (" + status + ")");
+            ui->list_online->addItem(entry);
         }
         return;
     }
@@ -58,11 +60,13 @@ void ChallengeWindow::onMessageReceived(QString msgtype, QString payload) {
 }
 
 void ChallengeWindow::onPlayerChanged(const QString &currentPlayer) {
-    if (currentPlayer.contains("In game")) {
-        ui->btn_challenge->setDisabled(true);
-    } else {
-        ui->btn_challenge->setEnabled(true);
-    }
+    // if (currentPlayer.contains("In game")) {
+    //     ui->btn_challenge->setDisabled(true);
+    // } else {
+    //     ui->btn_challenge->setEnabled(true);
+    // }
+
+    ui->btn_challenge->setEnabled(true);
 }
 
 void ChallengeWindow::on_btn_challenge_clicked()

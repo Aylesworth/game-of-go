@@ -50,6 +50,16 @@ struct Context {
 
 map<int, Context> ctx;
 
+struct MatchingInfo {
+    ClientInfo *client;
+    int boardSize;
+
+    MatchingInfo(ClientInfo *client, int boardSize) :
+            client(client), boardSize(boardSize) {}
+};
+
+vector <MatchingInfo> matching;
+
 ClientInfo *findClientByUsername(string username) {
     for (const auto &client: clients) {
         if (client->account->username == username) {
@@ -71,7 +81,9 @@ void setInGameStatus(int sock) {
 
 void notifyOnlineStatusChange() {
     for (const auto &client: clients) {
-        handleSend(client->socket, "CHGONL", "");
+        if (client->status == 0) {
+            handleSend(client->socket, "CHGONL", "");
+        }
     }
 }
 
@@ -87,6 +99,7 @@ void handleClientDisconnect(int sock) {
     ctx[sock].selfInfo = NULL;
     ctx[sock].opponentInfo = NULL;
     ctx[sock].game = NULL;
+    ctx[sock].challengers.clear();
 }
 
 int handleSend(int sock, const char *messageType, const char *payload) {
@@ -367,16 +380,17 @@ void *handleRequest(void *arg) {
             char content[BUFF_SIZE];
 
             for (const auto &client: clients) {
+                if (client->status != 0) continue;
                 if (client->account->username == ctx[sock].selfInfo->account->username) continue;
 
-                char status[20];
-                if (client->status == 0) {
-                    strcpy(status, "Available");
-                } else {
-                    strcpy(status, "In game");
-                }
+//                char status[20];
+//                if (client->status == 0) {
+//                    strcpy(status, "Available");
+//                } else {
+//                    strcpy(status, "In game");
+//                }
 
-                sprintf(content, "%s %s\n", client->account->username.c_str(), status);
+                sprintf(content, "%s (ELO %d)\n", client->account->username.c_str(), client->account->elo);
                 strcat(payload, content);
             }
 
@@ -384,12 +398,86 @@ void *handleRequest(void *arg) {
             continue;
         }
 
+        // Auto-matching
+        if (strcmp(messageType, "MATCH") == 0) {
+            int boardSize = atoi(strtok(payload, "\n"));
+
+            int matched = 0;
+            for (MatchingInfo m: matching) {
+                if (sock != m.client->socket
+                    && ctx[sock].selfInfo->account->rankType == m.client->account->rankType
+                    && boardSize == m.boardSize) {
+                    matched = 1;
+                    for (auto it = matching.begin(); it != matching.end(); it++) {
+                        if ((*it).client->socket == m.client->socket) {
+                            matching.erase(it);
+                            break;
+                        }
+                    }
+
+                    printf("Establish game between %s and %s\n",
+                           ctx[sock].selfInfo->account->username.c_str(),
+                           m.client->account->username.c_str());
+
+                    ctx[sock].opponentInfo = m.client;
+                    ctx[m.client->socket].opponentInfo = ctx[sock].selfInfo;
+                    setInGameStatus(sock);
+                    setInGameStatus(m.client->socket);
+                    notifyOnlineStatusChange();
+
+                    GoGame *game = new GoGame(boardSize);
+                    game->setId(generateGameId());
+
+                    ctx[sock].game = game;
+                    ctx[m.client->socket].game = game;
+
+                    srand(time(NULL));
+                    int randomColor = rand() % 2 + 1;
+
+                    game->setBlackPlayerId(
+                            randomColor == 1 ? ctx[sock].selfInfo->account->id : ctx[sock].opponentInfo->account->id);
+                    game->setWhitePlayerId(
+                            randomColor == 1 ? ctx[sock].opponentInfo->account->id : ctx[sock].selfInfo->account->id);
+
+                    memset(buff, 0, BUFF_SIZE);
+                    sprintf(buff, "%s (ELO %d)\n%d\n%d\n",
+                            ctx[sock].opponentInfo->account->username.c_str(),
+                            ctx[sock].opponentInfo->account->elo,
+                            boardSize, randomColor);
+                    handleSend(sock, "SETUP", buff);
+
+                    memset(buff, 0, BUFF_SIZE);
+                    sprintf(buff, "%s (ELO %d)\n%d\n%d\n",
+                            ctx[sock].selfInfo->account->username.c_str(),
+                            ctx[sock].selfInfo->account->elo,
+                            boardSize, 3 - randomColor);
+                    handleSend(m.client->socket, "SETUP", buff);
+
+                    break;
+                }
+            }
+
+            if (!matched) {
+                matching.push_back(MatchingInfo(ctx[sock].selfInfo, boardSize));
+            }
+            continue;
+        }
+
+        // Cancel matching
+        if (strcmp(messageType, "MATCCL") == 0) {
+            for (auto it = matching.begin(); it != matching.end(); it++) {
+                if ((*it).client->socket == sock) {
+                    matching.erase(it);
+                    break;
+                }
+            }
+            continue;
+        }
+
         // Invite other player
         if (strcmp(messageType, "INVITE") == 0) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
-
-            printf("%s invites %s\n", ctx[sock].selfInfo->account->username.c_str(), opponent);
 
             if (strcmp(opponent, "@CPU") == 0) {
                 ctx[sock].opponentInfo = NULL;
@@ -414,7 +502,7 @@ void *handleRequest(void *arg) {
                 game->setWhitePlayerId(randomColor == 1 ? -1 : ctx[sock].selfInfo->account->id);
 
                 memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%d\n%d\n", boardSize, randomColor);
+                sprintf(buff, "CPU (ELO %d)\n%d\n%d\n", cpu->elo, boardSize, randomColor);
                 handleSend(sock, "SETUP", buff);
 
                 if (randomColor != 1) {
@@ -440,8 +528,6 @@ void *handleRequest(void *arg) {
             char *opponent = strtok(payload, "\n");
             int oppsock = findClientByUsername(opponent)->socket;
 
-            printf("%s cancels inviting %s\n", ctx[sock].selfInfo->account->username.c_str(), opponent);
-
             auto it = find(ctx[oppsock].challengers.begin(), ctx[oppsock].challengers.end(), sock);
             if (it != ctx[oppsock].challengers.end()) {
                 ctx[oppsock].challengers.erase(it);
@@ -455,8 +541,6 @@ void *handleRequest(void *arg) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
             char *reply = strtok(NULL, "\n");
-
-            printf("%s %s %s\n", ctx[sock].selfInfo->account->username.c_str(), reply, opponent);
 
             ClientInfo *opponentInfo = findClientByUsername(opponent);
 
@@ -493,11 +577,17 @@ void *handleRequest(void *arg) {
                         randomColor == 1 ? ctx[sock].opponentInfo->account->id : ctx[sock].selfInfo->account->id);
 
                 memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%d\n%d\n", boardSize, randomColor);
+                sprintf(buff, "%s (ELO %d)\n%d\n%d\n",
+                        opponentInfo->account->username.c_str(),
+                        opponentInfo->account->elo,
+                        boardSize, randomColor);
                 handleSend(sock, "SETUP", buff);
 
                 memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%d\n%d\n", boardSize, 3 - randomColor);
+                sprintf(buff, "%s (ELO %d)\n%d\n%d\n",
+                        ctx[sock].selfInfo->account->username.c_str(),
+                        ctx[sock].selfInfo->account->elo,
+                        boardSize, 3 - randomColor);
                 handleSend(ctx[sock].opponentInfo->socket, "SETUP", buff);
             } else {
                 ctx[sock].opponentInfo = NULL;
@@ -677,6 +767,7 @@ void *handleRequest(void *arg) {
                     stats->totalMatches, stats->wins, stats->losses, stats->winningRate * 100,
                     stats->elo, stats->rankType.c_str(), stats->ranking);
             handleSend(sock, "STATS", buff);
+            continue;
         }
     }
 

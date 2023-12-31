@@ -36,7 +36,8 @@ private:
     QStackedWidget *stackedWidget;
 
 signals:
-    void closeChildWindows();
+    void matchSetUp();
+    void matchSetUp(QString opponent);
 
 private slots:
     void onMessageReceived(QString msgtype, QString payload);

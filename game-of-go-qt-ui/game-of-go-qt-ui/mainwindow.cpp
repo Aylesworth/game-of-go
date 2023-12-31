@@ -45,7 +45,7 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
         questionBox->setWindowTitle("Question");
         questionBox->setText("You've got a challenge from " + username + ". Do you want to accept?");
         questionBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        connect(MainWindow::getInstance(), &MainWindow::closeChildWindows, questionBox, &QMessageBox::hide);
+        connect(MainWindow::getInstance(), SIGNAL(matchSetUp()), questionBox, SLOT(hide()));
         if (questionBox->exec() == QMessageBox::Yes) {
             socket->sendMessage("INVRES", payload + "ACCEPT\n");
         } else {
@@ -60,11 +60,13 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
     }
 
     if (msgtype == "SETUP") {
-        emit closeChildWindows();
         QStringList params = payload.split("\n", Qt::SkipEmptyParts);
-        int boardSize = params[0].toInt();
-        int color = params[1].toInt();
+        int boardSize = params[1].toInt();
+        int color = params[2].toInt();
         next(new GameWidget(boardSize, color));
+        emit matchSetUp();
+        emit matchSetUp(params[0]);
+        return;
     }
 }
 
