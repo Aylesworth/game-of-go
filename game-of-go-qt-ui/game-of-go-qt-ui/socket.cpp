@@ -71,6 +71,7 @@ void Socket::sendMessage(QString msgtype, QString payload) {
             perror("Error");
             exit(EXIT_FAILURE);
         }
+        printf("Sent:\n%s\n", buff);
         payload = payload.mid(0, BUFF_SIZE - 1 - header_size);
     }
 
@@ -103,15 +104,12 @@ void Socket::runReceiveThread() {
                 msgtype = headerFields[0];
                 blocktype = headerFields[1];
                 payloadlen = headerFields[2].toInt();
-                qDebug() << QString("msgtype = %1, blocktype = %2, payloadlen = %3, payload.size() = %4").arg(msgtype).arg(blocktype).arg(payloadlen).arg(payload.size());
 
                 if (payloadlen < payload.size()) {
                     remaining = payload.mid(payloadlen);
                     payload = payload.mid(0, payloadlen);
-                    qDebug() << QString("payload = %1, remaining = %2").arg(payload).arg(remaining);
                 } else {
                     remaining = "";
-                    qDebug() << QString("payload = %1").arg(payload);
                 }
                 fullpayload += payload;
 
@@ -138,15 +136,12 @@ void Socket::runReceiveThread() {
             msgtype = headerFields[0];
             blocktype = headerFields[1];
             payloadlen = headerFields[2].toInt();
-            qDebug() << QString("msgtype = %1, blocktype = %2, payloadlen = %3").arg(msgtype).arg(blocktype).arg(payloadlen);
 
             if (payloadlen < payload.size()) {
                 remaining = payload.mid(payloadlen);
                 payload = payload.mid(0, payloadlen);
-                qDebug() << QString("payload = %1, remaining = %2").arg(payload).arg(remaining);
             } else {
                 remaining = "";
-                qDebug() << QString("payload = %1").arg(payload);
             }
 
             fullpayload += payload;

@@ -16,9 +16,13 @@ public:
     explicit ChallengeWindow(QWidget *parent = nullptr);
     ~ChallengeWindow();
 
+protected:
+    void closeEvent(QCloseEvent *event) override;
+
 private:
     Ui::ChallengeWindow *ui;
     Socket *socket;
+    QString invitedUsername;
 
 private slots:
     void onMessageReceived(QString msgtype, QString payload);

@@ -152,12 +152,10 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
 
 void GameWidget::on_btn_pass_clicked()
 {
-    if (QMessageBox::information(
+    if (QMessageBox::question(
             this,
             "Message",
-            "Are you sure you want to pass?",
-            {QMessageBox::Yes, QMessageBox::No},
-            QMessageBox::No
+            "Are you sure you want to pass?"
     ) == QMessageBox::Yes) {
         if (lastCoords != "") {
             gameBoard->drawStone(lastColor, lastCoords, false);
@@ -177,13 +175,11 @@ void GameWidget::on_btn_pass_clicked()
 
 void GameWidget::on_btn_resign_clicked()
 {
-    if (QMessageBox::information(
+    if (QMessageBox::question(
             this,
             "Message",
-            "Are you sure you want to resign?",
-            {QMessageBox::Yes, QMessageBox::No},
-            QMessageBox::No
-            ) == QMessageBox::Yes) {
+            "Are you sure you want to resign?"
+    ) == QMessageBox::Yes) {
         if (lastCoords != "") {
             gameBoard->drawStone(lastColor, lastCoords, false);
         }
@@ -202,13 +198,11 @@ void GameWidget::on_btn_resign_clicked()
 
 bool GameWidget::handleCloseRequest() {
     if (gameFinished) return true;
-    if (QMessageBox::information(
+    if (QMessageBox::question(
             this,
-            "Message",
-            "Are you sure you want to leave?\nThis will be considered as your defeat.",
-            {QMessageBox::Yes, QMessageBox::No},
-            QMessageBox::No
-            ) == QMessageBox::Yes) {
+            "Confirmation",
+            "Are you sure you want to leave?\nThis will be considered as your defeat."
+    ) == QMessageBox::Yes) {
         socket->sendMessage("INTRPT", QString("%1\nRESIGN\n").arg(myColor));
         return true;
     }
@@ -218,6 +212,7 @@ bool GameWidget::handleCloseRequest() {
 void GameWidget::on_btn_leave_clicked()
 {
     if (handleCloseRequest()) {
+        socket->sendMessage("RESACK");
         MainWindow::getInstance()->previous();
     }
 }

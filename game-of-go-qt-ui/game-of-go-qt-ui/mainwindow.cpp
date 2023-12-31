@@ -39,12 +39,14 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
     if (msgtype == "INVITE") {
         QStringList params = payload.split("\n", Qt::SkipEmptyParts);
         QString username = params[0];
-        if (QMessageBox::information(
-            this,
-            "Message",
-            "You've got a challenge from " + username + ". Do you want to accept?",
-            {QMessageBox::Yes | QMessageBox::No}
-        ) == QMessageBox::Yes) {
+
+        QMessageBox *questionBox = new QMessageBox(this);
+        questionBox->setIcon(QMessageBox::Question);
+        questionBox->setWindowTitle("Question");
+        questionBox->setText("You've got a challenge from " + username + ". Do you want to accept?");
+        questionBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        connect(MainWindow::getInstance(), &MainWindow::closeChildWindows, questionBox, &QMessageBox::hide);
+        if (questionBox->exec() == QMessageBox::Yes) {
             socket->sendMessage("INVRES", payload + "ACCEPT\n");
         } else {
             socket->sendMessage("INVRES", payload + "DECLINE\n");
@@ -52,17 +54,13 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
         return;
     }
 
-    if (msgtype == "INVRES") {
-        QStringList params = payload.split("\n", Qt::SkipEmptyParts);
-        QString username = params[0];
-        // int boardSize = params[1].toInt();
-        QString reply = params[2];
-        if (reply == "DECLINE")
-            QMessageBox::information(this, "Message", "Player " + username + " declined your challenge");
+    if (msgtype == "INVCCL") {
+        QMessageBox::information(this, "Message", "This challenge is no longer valid.");
         return;
     }
 
     if (msgtype == "SETUP") {
+        emit closeChildWindows();
         QStringList params = payload.split("\n", Qt::SkipEmptyParts);
         int boardSize = params[0].toInt();
         int color = params[1].toInt();

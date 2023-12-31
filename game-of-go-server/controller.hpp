@@ -44,6 +44,7 @@ Account *cpu = findAccount("@CPU");
 struct Context {
     ClientInfo *selfInfo;
     ClientInfo *opponentInfo;
+    vector<int> challengers;
     GoGame *game;
 };
 
@@ -56,6 +57,16 @@ ClientInfo *findClientByUsername(string username) {
         }
     }
     return NULL;
+}
+
+void setInGameStatus(int sock) {
+    ctx[sock].selfInfo->status = 1;
+    for (auto &entry: ctx) {
+        Context &c = entry.second;
+        auto it = find(c.challengers.begin(), c.challengers.end(), sock);
+        if (it != c.challengers.end())
+            c.challengers.erase(it);
+    }
 }
 
 void notifyOnlineStatusChange() {
@@ -225,8 +236,8 @@ void updatePlayerRankings(GoGame *game, Account *p1, Account *p2) {
     p2->elo = (int) round(p2->elo + K2 * (S2 - SE2));
     p2->rankType = calculateRankType(p2->elo);
 
-    printf("R1 = %d + %.2f (%.2f - %.2f) = %d\n", elo1_old, K1, S1, SE1, p1->elo);
-    printf("R2 = %d + %.2f (%.2f - %.2f) = %d\n", elo2_old, K2, S2, SE2, p2->elo);
+    printf("R1 = %d + %.2f (%.4f - %.4f) = %d\n", elo1_old, K1, S1, SE1, p1->elo);
+    printf("R2 = %d + %.2f (%.4f - %.4f) = %d\n", elo2_old, K2, S2, SE2, p2->elo);
     updateRanking(*p1);
     updateRanking(*p2);
 }
@@ -378,6 +389,8 @@ void *handleRequest(void *arg) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
 
+            printf("%s invites %s\n", ctx[sock].selfInfo->account->username.c_str(), opponent);
+
             if (strcmp(opponent, "@CPU") == 0) {
                 ctx[sock].opponentInfo = NULL;
 
@@ -387,7 +400,7 @@ void *handleRequest(void *arg) {
 
                 printf("Establish game between %s and %s\n", ctx[sock].selfInfo->account->username.c_str(), "@CPU");
 
-                ctx[sock].selfInfo->status = 1;
+                setInGameStatus(sock);
                 notifyOnlineStatusChange();
 
                 GoGame *game = new GoGame(boardSize);
@@ -413,10 +426,27 @@ void *handleRequest(void *arg) {
             }
 
             ctx[sock].opponentInfo = findClientByUsername(opponent);
+            int oppsock = ctx[sock].opponentInfo->socket;
+            ctx[oppsock].challengers.push_back(sock);
 
             memset(buff, 0, BUFF_SIZE);
             sprintf(buff, "%s\n%d\n", ctx[sock].selfInfo->account->username.c_str(), boardSize);
-            handleSend(ctx[sock].opponentInfo->socket, "INVITE", buff);
+            handleSend(oppsock, "INVITE", buff);
+            continue;
+        }
+
+        // Cancel invitation
+        if (strcmp(messageType, "INVCCL") == 0) {
+            char *opponent = strtok(payload, "\n");
+            int oppsock = findClientByUsername(opponent)->socket;
+
+            printf("%s cancels inviting %s\n", ctx[sock].selfInfo->account->username.c_str(), opponent);
+
+            auto it = find(ctx[oppsock].challengers.begin(), ctx[oppsock].challengers.end(), sock);
+            if (it != ctx[oppsock].challengers.end()) {
+                ctx[oppsock].challengers.erase(it);
+            }
+
             continue;
         }
 
@@ -425,17 +455,27 @@ void *handleRequest(void *arg) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
             char *reply = strtok(NULL, "\n");
-            ctx[sock].opponentInfo = findClientByUsername(opponent);
+
+            printf("%s %s %s\n", ctx[sock].selfInfo->account->username.c_str(), reply, opponent);
+
+            ClientInfo *opponentInfo = findClientByUsername(opponent);
+
+            if (find(ctx[sock].challengers.begin(), ctx[sock].challengers.end(), opponentInfo->socket) ==
+                ctx[sock].challengers.end()) {
+                handleSend(sock, "INVCCL", "");
+                continue;
+            }
 
             memset(buff, 0, BUFF_SIZE);
-            sprintf(buff, "%s\n%d\n%s\n", ctx[sock].selfInfo->account->username.c_str(), boardSize, reply);
-            handleSend(ctx[sock].opponentInfo->socket, "INVRES", buff);
+            sprintf(buff, "%s\n%s\n", ctx[sock].selfInfo->account->username.c_str(), reply);
+            handleSend(opponentInfo->socket, "INVRES", buff);
 
             if (strcmp(reply, "ACCEPT") == 0) {
                 printf("Establish game between %s and %s\n", ctx[sock].selfInfo->account->username.c_str(), opponent);
 
-                ctx[sock].selfInfo->status = 1;
-                ctx[sock].opponentInfo->status = 1;
+                ctx[sock].opponentInfo = opponentInfo;
+                setInGameStatus(sock);
+                setInGameStatus(opponentInfo->socket);
                 notifyOnlineStatusChange();
 
                 GoGame *game = new GoGame(boardSize);
@@ -447,8 +487,10 @@ void *handleRequest(void *arg) {
                 srand(time(NULL));
                 int randomColor = rand() % 2 + 1;
 
-                game->setBlackPlayerId(randomColor == 1 ? ctx[sock].selfInfo->account->id : ctx[sock].opponentInfo->account->id);
-                game->setWhitePlayerId(randomColor == 1 ? ctx[sock].opponentInfo->account->id : ctx[sock].selfInfo->account->id);
+                game->setBlackPlayerId(
+                        randomColor == 1 ? ctx[sock].selfInfo->account->id : ctx[sock].opponentInfo->account->id);
+                game->setWhitePlayerId(
+                        randomColor == 1 ? ctx[sock].opponentInfo->account->id : ctx[sock].selfInfo->account->id);
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%d\n%d\n", boardSize, randomColor);
@@ -459,6 +501,9 @@ void *handleRequest(void *arg) {
                 handleSend(ctx[sock].opponentInfo->socket, "SETUP", buff);
             } else {
                 ctx[sock].opponentInfo = NULL;
+                auto it = find(ctx[sock].challengers.begin(), ctx[sock].challengers.end(), opponentInfo->socket);
+                if (it != ctx[sock].challengers.end())
+                    ctx[sock].challengers.erase(it);
             }
             continue;
         }
