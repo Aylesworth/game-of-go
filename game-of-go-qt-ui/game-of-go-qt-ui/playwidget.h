@@ -17,12 +17,12 @@ class PlayWidget : public QWidget
 public:
     explicit PlayWidget(QWidget *parent = nullptr);
     ~PlayWidget();
-    int getSelectedBoardSize();
 
 private slots:
     void onBoardSizeChanged(const QString &currentSize);
     void onMatchSetUp(QString opponent);
     void onTimeout();
+    void on_btn_settings_clicked();
     void on_btn_challenge_clicked();
     void on_btn_cpu_clicked();
     void on_btn_quick_clicked();
@@ -34,7 +34,29 @@ private:
     QTimer *timer;
     QMessageBox *waitingBox;
     int waitingSeconds;
-    int selectedBoardSize;
+    int boardSize;
+    double komi;
+    int timeSystem;
+    int mainTimeSeconds;
+    int byoyomiTimeSeconds;
+    int byoyomiPeriods;
+    int ranked;
+
+public:
+    int getBoardSize();
+    double getKomi();
+    int getTimeSystem();
+    int getMainTimeSeconds();
+    int getByoyomiTimeSeconds();
+    int getByoyomiPeriods();
+    int getRanked();
+    void setBoardSize(int boardSize);
+    void setKomi(double komi);
+    void setTimeSystem(int timeSystem);
+    void setMainTimeSeconds(int mainTimeSeconds);
+    void setByoyomiTimeSeconds(int byoyomiTimeSeconds);
+    void setByoyomiPeriods(int byoyomiPeriods);
+    void setRanked(int ranked);
 };
 
 #endif // PLAYWIDGET_H

@@ -39,6 +39,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         historyitemwidget.h historyitemwidget.cpp historyitemwidget.ui
         replaywidget.h replaywidget.cpp replaywidget.ui
         rankingswidget.h rankingswidget.cpp rankingswidget.ui
+        gameconfigwindow.h gameconfigwindow.cpp gameconfigwindow.ui
 
 
 

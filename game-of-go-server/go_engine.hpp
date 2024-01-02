@@ -24,6 +24,9 @@ using namespace std;
 #define LIBERTY 8
 #define OFFBOARD 12
 
+#define NONE 0
+#define BYOYOMI 1
+
 class GoGame {
 private:
     string id;
@@ -31,6 +34,12 @@ private:
     int blackPlayerId;
     int whitePlayerId;
     int boardSize;
+    float komi;
+    int timeSystem;
+    int mainTimeSeconds[3];
+    int byoyomiPeriods[3];
+    int byoyomiTimeSeconds;
+    int ranked;
     int boardRange;
     vector<int> board;
     vector<int> liberties;
@@ -243,9 +252,25 @@ private:
     }
 
 public:
-    GoGame(int boardSize) {
+    GoGame(int boardSize,
+           float komi,
+           int timeSystem,
+           int mainTimeSeconds,
+           int byoyomiTimeSeconds,
+           int byoyomiPeriods,
+           int ranked
+    ) {
         this->timestamp = (int64_t) time(NULL);
         this->boardSize = boardSize;
+        this->komi = komi;
+        this->timeSystem = timeSystem;
+        this->mainTimeSeconds[BLACK] = mainTimeSeconds;
+        this->mainTimeSeconds[WHITE] = mainTimeSeconds;
+        this->byoyomiPeriods[BLACK] = byoyomiPeriods;
+        this->byoyomiPeriods[WHITE] = byoyomiPeriods;
+        this->byoyomiTimeSeconds = byoyomiTimeSeconds;
+        this->ranked = ranked;
+
         int boardRange = boardSize + 2;
         this->boardRange = boardRange;
         this->board.resize(boardRange * boardRange);
@@ -544,6 +569,13 @@ public:
         log += to_string(color) + "=RS ";
     }
 
+    void timeout(int color) {
+        calculateScore();
+        if (color == BLACK) blackScore = -1;
+        else whiteScore = -1;
+        log += to_string(color) + "=TO ";
+    }
+
     vector <string> getCaptured() {
         vector <string> captured;
         for (int pos: this->captured[0]) {
@@ -562,7 +594,7 @@ public:
         printBoard();
 
         blackScore = 0.0;
-        whiteScore = 6.5;
+        whiteScore = komi;
         blackTerritory = "";
         whiteTerritory = "";
 
@@ -642,6 +674,38 @@ public:
 
     int getBoardSize() {
         return boardSize;
+    }
+
+    float getKomi() {
+        return komi;
+    }
+
+    int getTimeSystem() {
+        return timeSystem;
+    }
+
+    int getMainTimeSecondsLeft(int color) {
+        return mainTimeSeconds[color];
+    }
+
+    int getByoyomiPeriodsLeft(int color) {
+        return byoyomiPeriods[color];
+    }
+
+    int getByoyomiTimeSeconds() {
+        return byoyomiTimeSeconds;
+    }
+
+    int isRanked() {
+        return ranked;
+    }
+
+    void setMainTimeSecondsLeft(int color, int seconds) {
+        mainTimeSeconds[color] = seconds;
+    }
+
+    void setByoyomiPeriodsLeft(int color, int periods) {
+        byoyomiPeriods[color] = periods;
     }
 };
 

@@ -71,10 +71,21 @@ void ChallengeWindow::onPlayerChanged(const QString &currentPlayer) {
 
 void ChallengeWindow::on_btn_challenge_clicked()
 {
+    PlayWidget *playWidget = static_cast<PlayWidget *>(parentWidget());
+
     QString username = ui->list_online->currentItem()->text();
     username = username.mid(0, username.indexOf('(')).trimmed();
-    QString boardSize = QString::number(static_cast<PlayWidget *>(parentWidget())->getSelectedBoardSize());
-    socket->sendMessage("INVITE", username + "\n" + boardSize + "\n");
+    int noneTimeSystem = playWidget->getTimeSystem() == 0;
+
+    socket->sendMessage("INVITE", QString("%1\n%2\n%3\n%4 %5 %6 %7\n%8\n")
+                                      .arg(username)
+                                      .arg(playWidget->getBoardSize())
+                                      .arg(playWidget->getKomi())
+                                      .arg(playWidget->getTimeSystem())
+                                      .arg(noneTimeSystem ? -1 : playWidget->getMainTimeSeconds())
+                                      .arg(noneTimeSystem ? -1 : playWidget->getByoyomiTimeSeconds())
+                                      .arg(noneTimeSystem ? -1 : playWidget->getByoyomiPeriods())
+                                      .arg(playWidget->getRanked()));
     ui->btn_challenge->setText("Waiting for reply...");
     ui->btn_challenge->setEnabled(false);
     invitedUsername = username;

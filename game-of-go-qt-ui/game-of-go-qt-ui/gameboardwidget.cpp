@@ -84,7 +84,7 @@ void GameBoardWidget::drawStone(int color, QString coords, bool withMarker) {
 }
 
 void GameBoardWidget::removeStones(QStringList coordsList) {
-    for (QString coords: coordsList) {
+    for (QString &coords: coordsList) {
         if (stoneMap[coords] != nullptr) {
             stoneMap[coords]->hide();
             stoneMap.erase(coords);

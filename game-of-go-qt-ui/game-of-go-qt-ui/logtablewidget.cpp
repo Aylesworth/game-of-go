@@ -25,7 +25,16 @@ LogTableWidget::~LogTableWidget()
 
 void LogTableWidget::addRow(int color, QString coords) {
     QString player = color == 1 ? "BLACK" : "WHITE";
-    QString move = coords == "PA" ? "passes" : coords == "RS" ? "resigns" : "plays " + coords;
+    QString move;
+    if (coords == "PA") {
+        move = "passes";
+    } else if (coords == "RS") {
+        move = "resigns";
+    } else if (coords == "TO") {
+        move = "runs out of time";
+    } else {
+        move = "plays " + coords;
+    }
 
     model->appendRow({new QStandardItem(player), new QStandardItem(move)});
     ui->tableView->scrollToBottom();

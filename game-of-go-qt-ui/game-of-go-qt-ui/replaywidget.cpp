@@ -42,6 +42,8 @@ ReplayWidget::ReplayWidget(
     ui->cmb_speed->addItems({"0.25x", "0.5x", "1x", "2x", "3x", "5x", "10x"});
     ui->cmb_speed->setCurrentText("1x");
 
+    scoreboard->disableTimeControl();
+
     timer = new QTimer(this);
     timer->setInterval(speedMillis);
 
@@ -66,9 +68,9 @@ void ReplayWidget::onCurrentTextChanged(const QString &currentText) {
 
 void ReplayWidget::updateScore(int color, int difference) {
     if (color == 1) {
-        scoreboard->setBlackScore(scoreboard->getBlackScore() + difference);
+        scoreboard->setBlackCaptures(scoreboard->getBlackCaptures() + difference);
     } else {
-        scoreboard->setWhiteScore(scoreboard->getWhiteScore() + difference);
+        scoreboard->setWhiteCaptures(scoreboard->getWhiteCaptures() + difference);
     }
 }
 

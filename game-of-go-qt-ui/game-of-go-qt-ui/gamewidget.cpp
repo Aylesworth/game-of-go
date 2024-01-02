@@ -5,13 +5,21 @@
 #include "logtablewidget.h"
 #include "mainwindow.h"
 #include "socket.h"
-#include "menuwidget.h"
 
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QDebug>
+#include <QTimer>
 
-GameWidget::GameWidget(int boardSize, int myColor, QWidget *parent)
+GameWidget::GameWidget(
+    int boardSize,
+    int myColor,
+    double komi,
+    int timeSystem,
+    int mainTime,
+    int byoyomiTime,
+    int byoyomiPeriods,
+    QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::GameWidget)
     , myColor(myColor)
@@ -19,12 +27,29 @@ GameWidget::GameWidget(int boardSize, int myColor, QWidget *parent)
     , gameFinished(false)
     , lastCoords("")
     , lastColor(0)
+    , timeSystem(timeSystem)
+    , byoyomiTime(byoyomiTime)
+    , timer(new QTimer(this))
     , socket(Socket::getInstance())
 {
     ui->setupUi(this);
     gameBoard = new GameBoardWidget(boardSize, myColor, this);
     scoreboard = new ScoreboardWidget;
     logTable = new LogTableWidget;
+
+    scoreboard->setKomi(komi);
+    scoreboard->setBlackCaptures(0);
+    scoreboard->setWhiteCaptures(0);
+    if (timeSystem == 0) {
+        scoreboard->disableTimeControl();
+    } else {
+        scoreboard->setBlackMainTime(mainTime);
+        scoreboard->setWhiteMainTime(mainTime);
+        scoreboard->setBlackByoyomiTime(byoyomiTime);
+        scoreboard->setWhiteByoyomiTime(byoyomiTime);
+        scoreboard->setBlackByoyomiPeriods(byoyomiPeriods);
+        scoreboard->setWhiteByoyomiPeriods(byoyomiPeriods);
+    }
 
     ui->leftVBox->addWidget(gameBoard);
     ui->rightVBox->setSpacing(20);
@@ -35,7 +60,10 @@ GameWidget::GameWidget(int boardSize, int myColor, QWidget *parent)
     ui->lbl_prompt->setText(QString("You are %1. Black's turn").arg(myColor == 1 ? "black" : "white"));
     gameBoard->setStoneShadowDisabled(!myTurn);
 
+    timer->setInterval(1000);
+
     connect(gameBoard, &GameBoardWidget::clicked, this, &GameWidget::onGameBoardClicked);
+    connect(timer, &QTimer::timeout, this, &GameWidget::onTimeout);
     connect(socket, &Socket::messageReceived, this, &GameWidget::onMessageReceived);
 }
 
@@ -46,6 +74,8 @@ GameWidget::~GameWidget()
 
 void GameWidget::onGameBoardClicked(QString coords) {
     socket->sendMessage("MOVE", QString("%1\n%2\n").arg(myColor).arg(coords));
+    if (timeSystem == 1)
+        socket->sendMessage("BYOYOM", QString("%1\n%2\n%3\n").arg(myColor).arg(timingType).arg(timeLeft));
 }
 
 void GameWidget::onMessageReceived(QString msgtype, QString payload) {
@@ -54,13 +84,11 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
         int color = params[0].toInt();
         QString coords = params[1];
         logTable->addRow(color, coords);
+        timer->stop();
 
         if (coords != "PA") {
             gameBoard->drawStone(color, coords, true);
-            qDebug() << lastCoords;
             if (lastCoords != "") {
-                qDebug() << lastCoords;
-                // gameBoard->removeStones({lastCoords});
                 gameBoard->drawStone(lastColor, lastCoords, false);
             }
             lastCoords = coords;
@@ -70,9 +98,9 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
                 gameBoard->removeStones(capturedList);
 
                 if (color == 1) {
-                    scoreboard->setBlackScore(scoreboard->getBlackScore() + capturedList.size());
+                    scoreboard->setBlackCaptures(scoreboard->getBlackCaptures() + capturedList.size());
                 } else {
-                    scoreboard->setWhiteScore(scoreboard->getWhiteScore() + capturedList.size());
+                    scoreboard->setWhiteCaptures(scoreboard->getWhiteCaptures() + capturedList.size());
                 }
             }
 
@@ -110,6 +138,15 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
             ui->btn_resign->setEnabled(false);
             ui->lbl_prompt->setText(color == 1 ? "Black resigns. White wins!" : "White resigns. Black wins!");
             logTable->addRow(color, "RS");
+            timer->stop();
+        } else if (params[1] == "TIMEOUT") {
+            myTurn = false;
+            gameBoard->setStoneShadowDisabled(true);
+            ui->btn_pass->setEnabled(false);
+            ui->btn_resign->setEnabled(false);
+            ui->lbl_prompt->setText(color == 1 ? "Black ran out of time. White wins!" : "White ran out of time. Black wins!");
+            logTable->addRow(color, "TO");
+            timer->stop();
         }
         return;
     }
@@ -126,6 +163,7 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
         gameBoard->setStoneShadowDisabled(true);
         ui->btn_pass->setEnabled(false);
         ui->btn_resign->setEnabled(false);
+        timer->stop();
 
         QStringList params = payload.split("\n");
         QStringList scores = params[0].split(" ", Qt::SkipEmptyParts);
@@ -148,6 +186,47 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
         }
         return;
     }
+
+    if (msgtype == "BYOYOM") {
+        scoreboard->setBlackByoyomiTime(byoyomiTime);
+        scoreboard->setWhiteByoyomiTime(byoyomiTime);
+        QStringList params = payload.split("\n", Qt::SkipEmptyParts);
+        timingColor = params[0].toInt();
+        timingType = params[1];
+        timeLeft = params[2].toInt();
+        timer->start();
+        return;
+    }
+}
+
+void GameWidget::onTimeout() {
+    if (--timeLeft >= 0) {
+        if (timingColor == 1) {
+            if (timingType == "M") {
+                scoreboard->setBlackMainTime(timeLeft);
+            } else {
+                scoreboard->setBlackByoyomiTime(timeLeft);
+            }
+        } else {
+            if (timingType == "M") {
+                scoreboard->setWhiteMainTime(timeLeft);
+            } else {
+                scoreboard->setWhiteByoyomiTime(timeLeft);
+            }
+        }
+    } else {
+        timer->stop();
+        if (timingColor == myColor) {
+            socket->sendMessage("BYOYOM", QString("%1\n%2\n%3\n").arg(myColor).arg(timingType).arg(0));
+        }
+        if (timingType == "B") {
+            if (timingColor == 1) {
+                scoreboard->setBlackByoyomiPeriods(scoreboard->getBlackByoyomiPeriods() - 1);
+            } else {
+                scoreboard->setWhiteByoyomiPeriods(scoreboard->getWhiteByoyomiPeriods() - 1);
+            }
+        }
+    }
 }
 
 void GameWidget::on_btn_pass_clicked()
@@ -164,11 +243,14 @@ void GameWidget::on_btn_pass_clicked()
         lastColor = 0;
 
         socket->sendMessage("MOVE", QString("%1\nPA\n").arg(myColor));
+        if (timeSystem == 1)
+            socket->sendMessage("BYOYOM", QString("%1\n%2\n%3\n").arg(myColor).arg(timingType).arg(timeLeft));
         myTurn = false;
         gameBoard->setStoneShadowDisabled(true);
         ui->btn_pass->setEnabled(false);
         ui->lbl_prompt->setText(myColor == 1 ? "Black passes. White's turn" : "White passes. Black's turn");
         logTable->addRow(myColor, "PA");
+        timer->stop();
     }
 }
 
@@ -193,6 +275,7 @@ void GameWidget::on_btn_resign_clicked()
         ui->btn_resign->setEnabled(false);
         ui->lbl_prompt->setText(myColor == 1 ? "Black resigns. White wins!" : "White resigns. Black wins!");
         logTable->addRow(myColor, "RS");
+        timer->stop();
     }
 }
 

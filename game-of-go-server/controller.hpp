@@ -233,6 +233,8 @@ string calculateRankType(int elo) {
 }
 
 void updatePlayerRankings(GoGame *game, Account *p1, Account *p2) {
+    if (!game->isRanked()) return;
+
     double S1 = (p1->id == game->getBlackPlayerId() && game->getBlackScore() > game->getWhiteScore())
                 || (p1->id == game->getWhitePlayerId() && game->getWhiteScore() > game->getBlackScore())
                 ? 1 : 0;
@@ -285,7 +287,70 @@ void sendComputerMove(ClientInfo *player, GoGame *game, int color) {
                     notifyOnlineStatusChange();
                 }
             }
+            return;
         }
+    }
+}
+
+void setupGame(int sock1, int sock2, GoGame *game) {
+    char buff[BUFF_SIZE];
+
+    ClientInfo *player1 = ctx[sock1].selfInfo;
+    ClientInfo *player2 = ctx[sock2].selfInfo;
+
+    printf("Establish game between %s and %s\n",
+           player1->account->username.c_str(),
+           player2->account->username.c_str());
+
+    ctx[sock1].opponentInfo = player2;
+    ctx[sock2].opponentInfo = player1;
+    setInGameStatus(sock1);
+    setInGameStatus(sock2);
+    notifyOnlineStatusChange();
+
+    game->setId(generateGameId());
+
+    ctx[sock1].game = game;
+    ctx[sock2].game = game;
+
+    srand(time(NULL));
+    int randomColor = rand() % 2 + 1;
+
+    game->setBlackPlayerId(
+            randomColor == 1 ? player1->account->id : player2->account->id);
+    game->setWhitePlayerId(
+            randomColor == 1 ? player2->account->id : player1->account->id);
+
+    memset(buff, 0, BUFF_SIZE);
+    sprintf(buff, "%s (ELO %d)\n%d\n%d\n%.2f\n%d %d %d %d\n",
+            player2->account->username.c_str(),
+            player2->account->elo,
+            game->getBoardSize(), randomColor,
+            game->getKomi(),
+            game->getTimeSystem(),
+            game->getMainTimeSecondsLeft(1),
+            game->getByoyomiTimeSeconds(),
+            game->getByoyomiPeriodsLeft(1));
+    handleSend(sock1, "SETUP", buff);
+
+    memset(buff, 0, BUFF_SIZE);
+    sprintf(buff, "%s (ELO %d)\n%d\n%d\n%.2f\n%d %d %d %d\n",
+            player1->account->username.c_str(),
+            player1->account->elo,
+            game->getBoardSize(), 3 - randomColor,
+            game->getKomi(),
+            game->getTimeSystem(),
+            game->getMainTimeSecondsLeft(1),
+            game->getByoyomiTimeSeconds(),
+            game->getByoyomiPeriodsLeft(1));
+    handleSend(sock2, "SETUP", buff);
+
+    if (game->getTimeSystem() == 1) {
+        usleep(10000);
+        memset(buff, 0, BUFF_SIZE);
+        sprintf(buff, "1\nM\n%d\n", game->getMainTimeSecondsLeft(1));
+        handleSend(sock1, "BYOYOM", buff);
+        handleSend(sock2, "BYOYOM", buff);
     }
 }
 
@@ -294,7 +359,7 @@ void generateMatches(int number) {
         vector < Account * > players = getRandomPlayers(2);
 
         int boardSizes[3] = {9, 13, 19};
-        GoGame *game = new GoGame(boardSizes[rand() % 3]);
+        GoGame *game = new GoGame(boardSizes[rand() % 3], 6.5, 0, -1, -1, -1, 1);
         game->setId(generateGameId());
         game->setBlackPlayerId(players[0]->id);
         game->setWhitePlayerId(players[1]->id);
@@ -383,13 +448,6 @@ void *handleRequest(void *arg) {
                 if (client->status != 0) continue;
                 if (client->account->username == ctx[sock].selfInfo->account->username) continue;
 
-//                char status[20];
-//                if (client->status == 0) {
-//                    strcpy(status, "Available");
-//                } else {
-//                    strcpy(status, "In game");
-//                }
-
                 sprintf(content, "%s (ELO %d)\n", client->account->username.c_str(), client->account->elo);
                 strcat(payload, content);
             }
@@ -415,44 +473,7 @@ void *handleRequest(void *arg) {
                         }
                     }
 
-                    printf("Establish game between %s and %s\n",
-                           ctx[sock].selfInfo->account->username.c_str(),
-                           m.client->account->username.c_str());
-
-                    ctx[sock].opponentInfo = m.client;
-                    ctx[m.client->socket].opponentInfo = ctx[sock].selfInfo;
-                    setInGameStatus(sock);
-                    setInGameStatus(m.client->socket);
-                    notifyOnlineStatusChange();
-
-                    GoGame *game = new GoGame(boardSize);
-                    game->setId(generateGameId());
-
-                    ctx[sock].game = game;
-                    ctx[m.client->socket].game = game;
-
-                    srand(time(NULL));
-                    int randomColor = rand() % 2 + 1;
-
-                    game->setBlackPlayerId(
-                            randomColor == 1 ? ctx[sock].selfInfo->account->id : ctx[sock].opponentInfo->account->id);
-                    game->setWhitePlayerId(
-                            randomColor == 1 ? ctx[sock].opponentInfo->account->id : ctx[sock].selfInfo->account->id);
-
-                    memset(buff, 0, BUFF_SIZE);
-                    sprintf(buff, "%s (ELO %d)\n%d\n%d\n",
-                            ctx[sock].opponentInfo->account->username.c_str(),
-                            ctx[sock].opponentInfo->account->elo,
-                            boardSize, randomColor);
-                    handleSend(sock, "SETUP", buff);
-
-                    memset(buff, 0, BUFF_SIZE);
-                    sprintf(buff, "%s (ELO %d)\n%d\n%d\n",
-                            ctx[sock].selfInfo->account->username.c_str(),
-                            ctx[sock].selfInfo->account->elo,
-                            boardSize, 3 - randomColor);
-                    handleSend(m.client->socket, "SETUP", buff);
-
+                    setupGame(sock, m.client->socket, new GoGame(boardSize, 6.5, 0, -1, -1, -1, 1));
                     break;
                 }
             }
@@ -477,13 +498,21 @@ void *handleRequest(void *arg) {
         // Invite other player
         if (strcmp(messageType, "INVITE") == 0) {
             char *opponent = strtok(payload, "\n");
-            int boardSize = atoi(strtok(NULL, "\n"));
+            char *params = payload + strlen(opponent) + 1;
 
             if (strcmp(opponent, "@CPU") == 0) {
+                int boardSize = atoi(strtok(params, "\n"));
+                float komi = strtof(strtok(NULL, "\n"), NULL);
+                int timeSystem = atoi(strtok(NULL, " "));
+                int mainTimeSeconds = atoi(strtok(NULL, " "));
+                int byoyomiTimeSeconds = atoi(strtok(NULL, " "));
+                int byoyomiPeriods = atoi(strtok(NULL, "\n"));
+                bool ranked = atoi(strtok(NULL, "\n"));
+
                 ctx[sock].opponentInfo = NULL;
 
                 memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%s\n%d\n%s\n", "@CPU", boardSize, "ACCEPT");
+                sprintf(buff, "%s\n%s\n", "@CPU", "ACCEPT");
                 handleSend(sock, "INVRES", buff);
 
                 printf("Establish game between %s and %s\n", ctx[sock].selfInfo->account->username.c_str(), "@CPU");
@@ -491,7 +520,7 @@ void *handleRequest(void *arg) {
                 setInGameStatus(sock);
                 notifyOnlineStatusChange();
 
-                GoGame *game = new GoGame(boardSize);
+                GoGame *game = new GoGame(boardSize, komi, 0, -1, -1, -1, ranked);
                 game->setId(generateGameId());
                 ctx[sock].game = game;
 
@@ -502,11 +531,19 @@ void *handleRequest(void *arg) {
                 game->setWhitePlayerId(randomColor == 1 ? -1 : ctx[sock].selfInfo->account->id);
 
                 memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "CPU (ELO %d)\n%d\n%d\n", cpu->elo, boardSize, randomColor);
+                sprintf(buff, "CPU (ELO %d)\n%d\n%d\n%.2f\n%d %d %d %d\n",
+                        cpu->elo, boardSize, randomColor, komi, 0, -1, -1, -1);
                 handleSend(sock, "SETUP", buff);
 
+                usleep(10000);
+
+                if (timeSystem == 1) {
+                    memset(buff, 0, BUFF_SIZE);
+                    sprintf(buff, "1\nM\n%d\n", game->getMainTimeSecondsLeft(1));
+                    handleSend(sock, "BYOYOM", buff);
+                }
+
                 if (randomColor != 1) {
-                    usleep(100000);
                     sendComputerMove(ctx[sock].selfInfo, game, 3 - randomColor);
                 }
 
@@ -518,7 +555,7 @@ void *handleRequest(void *arg) {
             ctx[oppsock].challengers.push_back(sock);
 
             memset(buff, 0, BUFF_SIZE);
-            sprintf(buff, "%s\n%d\n", ctx[sock].selfInfo->account->username.c_str(), boardSize);
+            sprintf(buff, "%s\n%s\n", ctx[sock].selfInfo->account->username.c_str(), params);
             handleSend(oppsock, "INVITE", buff);
             continue;
         }
@@ -540,6 +577,12 @@ void *handleRequest(void *arg) {
         if (strcmp(messageType, "INVRES") == 0) {
             char *opponent = strtok(payload, "\n");
             int boardSize = atoi(strtok(NULL, "\n"));
+            float komi = strtof(strtok(NULL, "\n"), NULL);
+            int timeSystem = atoi(strtok(NULL, " "));
+            int mainTimeSeconds = atoi(strtok(NULL, " "));
+            int byoyomiTimeSeconds = atoi(strtok(NULL, " "));
+            int byoyomiPeriods = atoi(strtok(NULL, "\n"));
+            bool ranked = atoi(strtok(NULL, "\n"));
             char *reply = strtok(NULL, "\n");
 
             ClientInfo *opponentInfo = findClientByUsername(opponent);
@@ -555,40 +598,10 @@ void *handleRequest(void *arg) {
             handleSend(opponentInfo->socket, "INVRES", buff);
 
             if (strcmp(reply, "ACCEPT") == 0) {
-                printf("Establish game between %s and %s\n", ctx[sock].selfInfo->account->username.c_str(), opponent);
-
-                ctx[sock].opponentInfo = opponentInfo;
-                setInGameStatus(sock);
-                setInGameStatus(opponentInfo->socket);
-                notifyOnlineStatusChange();
-
-                GoGame *game = new GoGame(boardSize);
-                game->setId(generateGameId());
-
-                ctx[sock].game = game;
-                ctx[ctx[sock].opponentInfo->socket].game = game;
-
-                srand(time(NULL));
-                int randomColor = rand() % 2 + 1;
-
-                game->setBlackPlayerId(
-                        randomColor == 1 ? ctx[sock].selfInfo->account->id : ctx[sock].opponentInfo->account->id);
-                game->setWhitePlayerId(
-                        randomColor == 1 ? ctx[sock].opponentInfo->account->id : ctx[sock].selfInfo->account->id);
-
-                memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%s (ELO %d)\n%d\n%d\n",
-                        opponentInfo->account->username.c_str(),
-                        opponentInfo->account->elo,
-                        boardSize, randomColor);
-                handleSend(sock, "SETUP", buff);
-
-                memset(buff, 0, BUFF_SIZE);
-                sprintf(buff, "%s (ELO %d)\n%d\n%d\n",
-                        ctx[sock].selfInfo->account->username.c_str(),
-                        ctx[sock].selfInfo->account->elo,
-                        boardSize, 3 - randomColor);
-                handleSend(ctx[sock].opponentInfo->socket, "SETUP", buff);
+                setupGame(sock, opponentInfo->socket,
+                          new GoGame(boardSize, komi, timeSystem,
+                                     mainTimeSeconds, byoyomiTimeSeconds,
+                                     byoyomiPeriods, ranked));
             } else {
                 ctx[sock].opponentInfo = NULL;
                 auto it = find(ctx[sock].challengers.begin(), ctx[sock].challengers.end(), opponentInfo->socket);
@@ -668,6 +681,89 @@ void *handleRequest(void *arg) {
                     handleSend(ctx[sock].opponentInfo->socket, "MOVE", buff);
                 }
             }
+            continue;
+        }
+
+        // Byo-yomi time control
+        if (strcmp(messageType, "BYOYOM") == 0) {
+            GoGame *game = ctx[sock].game;
+
+            int color = atoi(strtok(payload, "\n"));
+            char timingType = strtok(NULL, "\n")[0];
+            int timeLeft = atoi(strtok(NULL, "\n"));
+
+            if (timingType == 'M') {
+                game->setMainTimeSecondsLeft(color, timeLeft);
+                if (timeLeft > 0) {
+                    int nextColor = 3 - color;
+                    memset(buff, 0, BUFF_SIZE);
+                    if (game->getMainTimeSecondsLeft(nextColor) > 0) {
+                        sprintf(buff, "%d\nM\n%d\n", nextColor, game->getMainTimeSecondsLeft(nextColor));
+                    } else {
+                        sprintf(buff, "%d\nB\n%d\n", nextColor, game->getByoyomiTimeSeconds());
+                    }
+                    handleSend(sock, "BYOYOM", buff);
+                    if (ctx[sock].opponentInfo != NULL) {
+                        handleSend(ctx[sock].opponentInfo->socket, "BYOYOM", buff);
+                    }
+                } else {
+                    memset(buff, 0, BUFF_SIZE);
+                    sprintf(buff, "%d\nB\n%d\n", color, game->getByoyomiTimeSeconds());
+                    handleSend(sock, "BYOYOM", buff);
+                    if (ctx[sock].opponentInfo != NULL) {
+                        handleSend(ctx[sock].opponentInfo->socket, "BYOYOM", buff);
+                    }
+                }
+            } else {
+                if (timeLeft > 0) {
+                    int nextColor = 3 - color;
+                    memset(buff, 0, BUFF_SIZE);
+                    if (game->getMainTimeSecondsLeft(nextColor) > 0) {
+                        sprintf(buff, "%d\nM\n%d\n", nextColor, game->getMainTimeSecondsLeft(nextColor));
+                    } else {
+                        sprintf(buff, "%d\nB\n%d\n", nextColor, game->getByoyomiTimeSeconds());
+                    }
+                    handleSend(sock, "BYOYOM", buff);
+                    if (ctx[sock].opponentInfo != NULL) {
+                        handleSend(ctx[sock].opponentInfo->socket, "BYOYOM", buff);
+                    }
+                } else {
+                    if (game->getByoyomiPeriodsLeft(color) > 1) {
+                        game->setByoyomiPeriodsLeft(color, game->getByoyomiPeriodsLeft(color) - 1);
+                        memset(buff, 0, BUFF_SIZE);
+                        sprintf(buff, "%d\nB\n%d\n", color, game->getByoyomiTimeSeconds());
+                        handleSend(sock, "BYOYOM", buff);
+                        if (ctx[sock].opponentInfo != NULL) {
+                            handleSend(ctx[sock].opponentInfo->socket, "BYOYOM", buff);
+                        }
+                    } else {
+                        memset(buff, 0, BUFF_SIZE);
+                        sprintf(buff, "%d\nTIMEOUT\n", color);
+                        handleSend(sock, "INTRPT", buff);
+                        if (ctx[sock].opponentInfo != NULL) {
+                            handleSend(ctx[sock].opponentInfo->socket, "INTRPT", buff);
+                        }
+
+                        game->timeout(color);
+
+                        memset(buff, 0, BUFF_SIZE);
+                        sprintf(buff, "%.1f %.1f\n%s\n%s\n", game->getBlackScore(), game->getWhiteScore(),
+                                game->getBlackTerritory().c_str(), game->getWhiteTerritory().c_str());
+
+                        handleSend(sock, "RESULT", buff);
+                        if (ctx[sock].opponentInfo != NULL) {
+                            handleSend(ctx[sock].opponentInfo->socket, "RESULT", buff);
+                            updatePlayerRankings(game, ctx[sock].selfInfo->account,
+                                                 ctx[sock].opponentInfo->account);
+                        } else {
+                            updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
+                        }
+
+                        saveGame(game);
+                    }
+                }
+            }
+
             continue;
         }
 
