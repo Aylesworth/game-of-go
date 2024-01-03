@@ -1,5 +1,5 @@
-#include "scoreboardWidget.h"
-#include "ui_scoreboardWidget.h"
+#include "scoreboardwidget.h"
+#include "ui_scoreboardwidget.h"
 
 #include <QStandardItemModel>
 

@@ -175,7 +175,7 @@ GameReplay *getGameReplayInfo(string gameId) {
 }
 
 Stats *getStatsOfPlayer(int playerId) {
-    int totalMatches, wins, losses;
+    int totalMatches, wins, losses, draws;
     double winningRate;
     int elo;
     string rankType;
@@ -193,9 +193,9 @@ Stats *getStatsOfPlayer(int playerId) {
         totalMatches = rs->getInt("total_matches");
     } else return NULL;
 
-    // Get wins and losses
+    // Get wins
     pstmt = con->prepareStatement(
-            "SELECT COUNT(id) AS total_matches FROM game "
+            "SELECT COUNT(id) AS wins FROM game "
             "WHERE (black_player = ? AND black_score > white_score) "
             "OR (white_player = ? AND white_score > black_score)"
     );
@@ -203,10 +203,26 @@ Stats *getStatsOfPlayer(int playerId) {
     pstmt->setInt(2, playerId);
     rs = pstmt->executeQuery();
     if (rs->next()) {
-        wins = rs->getInt("total_matches");
-        losses = totalMatches - wins;
+        wins = rs->getInt("wins");
     } else return NULL;
 
+    // Get losses
+    pstmt = con->prepareStatement(
+            "SELECT COUNT(id) AS losses FROM game "
+            "WHERE (black_player = ? AND black_score < white_score) "
+            "OR (white_player = ? AND white_score < black_score)"
+    );
+    pstmt->setInt(1, playerId);
+    pstmt->setInt(2, playerId);
+    rs = pstmt->executeQuery();
+    if (rs->next()) {
+        losses = rs->getInt("losses");
+    } else return NULL;
+
+    // Get draws
+    draws = totalMatches - wins - losses;
+
+    // Calculate winning rate
     winningRate = 1.0 * wins / totalMatches;
 
     // Get ELO rating and rank type
@@ -233,7 +249,7 @@ Stats *getStatsOfPlayer(int playerId) {
         ranking = rs->getInt("ranking");
     } else return NULL;
 
-    return new Stats(totalMatches, wins, losses, winningRate, elo, rankType, ranking);
+    return new Stats(totalMatches, wins, losses, draws, winningRate, elo, rankType, ranking);
 }
 
 #endif

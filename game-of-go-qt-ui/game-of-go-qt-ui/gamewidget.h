@@ -36,6 +36,7 @@ private slots:
     void onTimeout();
     void on_btn_pass_clicked();
     void on_btn_resign_clicked();
+    void on_btn_draw_clicked();
     void on_btn_leave_clicked();
 
 private:

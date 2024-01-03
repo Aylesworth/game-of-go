@@ -569,6 +569,12 @@ public:
         log += to_string(color) + "=RS ";
     }
 
+    void acceptDraw(int color) {
+        calculateScore();
+        blackScore = whiteScore = -1;
+        log += to_string(color) + "=DR ";
+    }
+
     void timeout(int color) {
         calculateScore();
         if (color == BLACK) blackScore = -1;

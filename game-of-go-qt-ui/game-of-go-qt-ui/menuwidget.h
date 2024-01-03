@@ -22,6 +22,8 @@ private slots:
 
     void on_btn_rankings_clicked();
 
+    void on_btn_logout_clicked();
+
 private:
     Ui::MenuWidget *ui;
 };

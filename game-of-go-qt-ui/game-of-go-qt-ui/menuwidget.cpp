@@ -4,6 +4,8 @@
 #include "historywidget.h"
 #include "rankingswidget.h"
 #include "mainwindow.h"
+#include "loginwindow.h"
+#include "socket.h"
 
 MenuWidget::MenuWidget(QWidget *parent)
     : QWidget(parent)
@@ -32,5 +34,14 @@ void MenuWidget::on_btn_history_clicked()
 void MenuWidget::on_btn_rankings_clicked()
 {
     MainWindow::getInstance()->next(new RankingsWidget());
+}
+
+
+void MenuWidget::on_btn_logout_clicked()
+{
+    Socket::getInstance()->sendMessage("LOGOUT");
+    MainWindow::getInstance()->hide();
+    LoginWindow *w = new LoginWindow();
+    w->show();
 }
 

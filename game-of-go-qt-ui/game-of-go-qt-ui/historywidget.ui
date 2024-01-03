@@ -161,7 +161,7 @@
      </widget>
     </item>
     <item row="3" column="0">
-     <widget class="QLabel" name="label_7">
+     <widget class="QLabel" name="label_6">
       <property name="font">
        <font>
         <pointsize>11</pointsize>
@@ -169,12 +169,12 @@
        </font>
       </property>
       <property name="text">
-       <string>Winning rate:</string>
+       <string>Draws:</string>
       </property>
      </widget>
     </item>
     <item row="3" column="1">
-     <widget class="QLabel" name="lbl_rate">
+     <widget class="QLabel" name="lbl_draws">
       <property name="font">
        <font>
         <pointsize>11</pointsize>
@@ -193,11 +193,11 @@
      <x>670</x>
      <y>110</y>
      <width>211</width>
-     <height>74</height>
+     <height>93</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="formLayout_2">
-    <item row="0" column="0">
+    <item row="1" column="0">
      <widget class="QLabel" name="label_9">
       <property name="font">
        <font>
@@ -210,7 +210,7 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="1">
+    <item row="1" column="1">
      <widget class="QLabel" name="lbl_elo">
       <property name="font">
        <font>
@@ -222,7 +222,7 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="0">
+    <item row="2" column="0">
      <widget class="QLabel" name="label_11">
       <property name="font">
        <font>
@@ -235,7 +235,7 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="1">
+    <item row="2" column="1">
      <widget class="QLabel" name="lbl_type">
       <property name="font">
        <font>
@@ -247,7 +247,7 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="0">
+    <item row="3" column="0">
      <widget class="QLabel" name="label_12">
       <property name="font">
        <font>
@@ -260,8 +260,33 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="1">
+    <item row="3" column="1">
      <widget class="QLabel" name="lbl_ranking">
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QLabel" name="label_7">
+      <property name="font">
+       <font>
+        <pointsize>11</pointsize>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Winning rate:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QLabel" name="lbl_rate">
       <property name="font">
        <font>
         <pointsize>11</pointsize>

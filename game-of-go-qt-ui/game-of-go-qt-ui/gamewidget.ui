@@ -27,7 +27,7 @@
   <widget class="QPushButton" name="btn_pass">
    <property name="geometry">
     <rect>
-     <x>240</x>
+     <x>170</x>
      <y>830</y>
      <width>151</width>
      <height>41</height>
@@ -45,7 +45,7 @@
   <widget class="QPushButton" name="btn_resign">
    <property name="geometry">
     <rect>
-     <x>470</x>
+     <x>360</x>
      <y>830</y>
      <width>151</width>
      <height>41</height>
@@ -108,6 +108,24 @@
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="btn_draw">
+   <property name="geometry">
+    <rect>
+     <x>550</x>
+     <y>830</y>
+     <width>151</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Offer A Draw</string>
    </property>
   </widget>
  </widget>

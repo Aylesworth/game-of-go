@@ -105,7 +105,6 @@ bool ReplayWidget::next() {
     QString move = log[index];
     QStringList actions = move.split("/", Qt::SkipEmptyParts);
     logTable->addRow(actions[0][0].toLatin1() - '0', actions[0].mid(2));
-    // qDebug() << "Add row: " << QString::number(actions[0][0].toLatin1() - '0') << ", " << actions[0].mid(2);
 
     for (QString action: actions) {
         int color = action[0].toLatin1() - '0';
@@ -140,8 +139,14 @@ bool ReplayWidget::next() {
             }
             if (param == "PA") {
                 if (index == log.size() - 1) {
-                    prompts[index] = QString("Black %1 : %2 White. %3 wins!").arg(blackScore).arg(whiteScore)
-                                         .arg(blackScore > whiteScore ? "Black" : "White");
+                    prompts[index] = QString("Black %1 : %2 White. ").arg(blackScore).arg(whiteScore);
+                    if (blackScore > whiteScore) {
+                        prompts[index] += "Black wins!";
+                    } else if (blackScore < whiteScore) {
+                        prompts[index] += "White wins!";
+                    } else {
+                        prompts[index] += "Tie game!";
+                    }
                     ui->lbl_prompt->setText(prompts[index]);
                     gameBoard->drawTerritory(1, blackTerritory);
                     gameBoard->drawTerritory(2, whiteTerritory);
@@ -151,6 +156,16 @@ bool ReplayWidget::next() {
                 }
             } else if (param == "RS") {
                 prompts[index] = color == 1 ? "Black resigns. White wins!" : "White resigns. Black wins!";
+                ui->lbl_prompt->setText(prompts[index]);
+                gameBoard->drawTerritory(1, blackTerritory);
+                gameBoard->drawTerritory(2, whiteTerritory);
+            } else if (param == "DR") {
+                prompts[index] = "Match drawn by agreement";
+                ui->lbl_prompt->setText(prompts[index]);
+                gameBoard->drawTerritory(1, blackTerritory);
+                gameBoard->drawTerritory(2, whiteTerritory);
+            } else if (param == "TO") {
+                prompts[index] = color == 1 ? "Black ran out of time. White wins!" : "White ran out of time. Black wins!";
                 ui->lbl_prompt->setText(prompts[index]);
                 gameBoard->drawTerritory(1, blackTerritory);
                 gameBoard->drawTerritory(2, whiteTerritory);

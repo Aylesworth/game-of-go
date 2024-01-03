@@ -51,6 +51,7 @@ struct Stats {
     int totalMatches;
     int wins;
     int losses;
+    int draws;
     double winningRate;
     int elo;
     string rankType;
@@ -58,8 +59,8 @@ struct Stats {
 
     Stats() {}
 
-    Stats(int totalMatches, int wins, int losses, double winningRate, int elo, string rankType, int ranking) :
-            totalMatches(totalMatches), wins(wins), losses(losses), winningRate(winningRate),
+    Stats(int totalMatches, int wins, int losses, int draws, double winningRate, int elo, string rankType, int ranking) :
+            totalMatches(totalMatches), wins(wins), losses(losses), draws(draws), winningRate(winningRate),
             elo(elo), rankType(rankType), ranking(ranking) {}
 };
 

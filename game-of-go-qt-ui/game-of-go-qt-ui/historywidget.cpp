@@ -35,10 +35,11 @@ void HistoryWidget::onMessageReceived(QString msgtype, QString payload) {
         ui->lbl_total->setText(params[0]);
         ui->lbl_wins->setText(params[1]);
         ui->lbl_losses->setText(params[2]);
-        ui->lbl_rate->setText(params[3]);
-        ui->lbl_elo->setText(params[4]);
-        ui->lbl_type->setText(params[5]);
-        ui->lbl_ranking->setText(params[6]);
+        ui->lbl_draws->setText(params[3]);
+        ui->lbl_rate->setText(params[4]);
+        ui->lbl_elo->setText(params[5]);
+        ui->lbl_type->setText(params[6]);
+        ui->lbl_ranking->setText(params[7]);
         return;
     }
 

@@ -69,6 +69,7 @@ void PlayWidget::on_btn_cpu_clicked()
 void PlayWidget::on_btn_quick_clicked()
 {
     socket->sendMessage("MATCH", QString::number(boardSize) + "\n");
+    waitingSeconds = 0;
     waitingBox = new QMessageBox(this);
     waitingBox->setIcon(QMessageBox::Information);
     waitingBox->setWindowTitle("Waiting");

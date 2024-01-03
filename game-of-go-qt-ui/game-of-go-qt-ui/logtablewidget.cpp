@@ -30,6 +30,8 @@ void LogTableWidget::addRow(int color, QString coords) {
         move = "passes";
     } else if (coords == "RS") {
         move = "resigns";
+    } else if (coords == "DR") {
+        move = "accepts draw request";
     } else if (coords == "TO") {
         move = "runs out of time";
     } else {

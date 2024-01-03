@@ -29,13 +29,24 @@ HistoryItemWidget::HistoryItemWidget(
     setFixedSize(720, 120);
     ui->setupUi(this);
 
-    bool victory = color == 1 ? blackScore > whiteScore : whiteScore > blackScore;
+    QString result;
+    QString resultColor;
+    if (blackScore == whiteScore) {
+        result = "DRAW";
+        resultColor = "DARKGREEN";
+    } else if ((color == 1 && blackScore > whiteScore) || (color == 2 && whiteScore > blackScore)) {
+        result = "VICTORY";
+        resultColor = "DARKBLUE";
+    } else {
+        result = "DEFEAT";
+        resultColor = "DARKRED";
+    }
 
     ui->lbl_id->setText("#" + id);
     ui->lbl_boardsize->setText(QString("%1x%1").arg(boardSize));
     ui->lbl_opponent->setText("vs. " + opponent);
-    ui->lbl_result->setText(victory ? "VICTORY" : "DEFEAT");
-    ui->lbl_result->setStyleSheet(QString("color: %1;").arg(victory ? "DARKBLUE" : "DARKRED"));
+    ui->lbl_result->setText(result);
+    ui->lbl_result->setStyleSheet(QString("color: %1;").arg(resultColor));
     ui->lbl_scores->setText(QString("Black score: %1\nWhite score: %2").arg(blackScore).arg(whiteScore));
     ui->lbl_time->setText(QDateTime::fromSecsSinceEpoch(time).toString("hh:mm dd/MM/yyyy"));
 

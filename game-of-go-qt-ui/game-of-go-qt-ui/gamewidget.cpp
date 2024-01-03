@@ -6,6 +6,7 @@
 #include "mainwindow.h"
 #include "socket.h"
 
+#include <unistd.h>
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QDebug>
@@ -74,8 +75,10 @@ GameWidget::~GameWidget()
 
 void GameWidget::onGameBoardClicked(QString coords) {
     socket->sendMessage("MOVE", QString("%1\n%2\n").arg(myColor).arg(coords));
-    if (timeSystem == 1)
+    if (timeSystem == 1) {
+        usleep(1000);
         socket->sendMessage("BYOYOM", QString("%1\n%2\n%3\n").arg(myColor).arg(timingType).arg(timeLeft));
+    }
 }
 
 void GameWidget::onMessageReceived(QString msgtype, QString payload) {
@@ -123,7 +126,6 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
     }
 
     if (msgtype == "MOVERR") {
-        // QMessageBox::warning(this, "Warning", "Invalid move!");
         ui->lbl_prompt->setText("Invalid move!");
         return;
     }
@@ -131,22 +133,40 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
     if (msgtype == "INTRPT") {
         QStringList params = payload.split("\n", Qt::SkipEmptyParts);
         int color = params[0].toInt();
-        if (params[1] == "RESIGN") {
-            myTurn = false;
-            gameBoard->setStoneShadowDisabled(true);
-            ui->btn_pass->setEnabled(false);
-            ui->btn_resign->setEnabled(false);
+        QString interruptType = params[1];
+
+        if (interruptType == "RESIGN") {
             ui->lbl_prompt->setText(color == 1 ? "Black resigns. White wins!" : "White resigns. Black wins!");
             logTable->addRow(color, "RS");
-            timer->stop();
-        } else if (params[1] == "TIMEOUT") {
-            myTurn = false;
-            gameBoard->setStoneShadowDisabled(true);
-            ui->btn_pass->setEnabled(false);
-            ui->btn_resign->setEnabled(false);
+        } else if (interruptType == "DRAW") {
+            if (QMessageBox::question(this, "Question", "Your opponent would like to offer a draw. Do you agree?") == QMessageBox::Yes) {
+                socket->sendMessage("INTRES", payload + "ACCEPT\n");
+                ui->lbl_prompt->setText("Match drawn by agreement");
+                logTable->addRow(3 - color, "DR");
+            } else {
+                socket->sendMessage("INTRES", payload + "DECLINE\n");
+            }
+        } else if (interruptType == "TIMEOUT") {
             ui->lbl_prompt->setText(color == 1 ? "Black ran out of time. White wins!" : "White ran out of time. Black wins!");
             logTable->addRow(color, "TO");
-            timer->stop();
+        }
+        return;
+    }
+
+    if (msgtype == "INTRES") {
+        QStringList params = payload.split("\n", Qt::SkipEmptyParts);
+        int color = params[0].toInt();
+        QString interruptType = params[1];
+        QString reply = params[2];
+
+        if (interruptType == "DRAW") {
+            if (reply == "ACCEPT") {
+                ui->lbl_prompt->setText("Match drawn by agreement");
+                logTable->addRow(3 - color, "DR");
+                QMessageBox::information(this, "Information", "Your opponent has accepted your draw request.");
+            } else {
+                QMessageBox::information(this, "Information", "Your opponent has declined your draw request.");
+            }
         }
         return;
     }
@@ -163,6 +183,7 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
         gameBoard->setStoneShadowDisabled(true);
         ui->btn_pass->setEnabled(false);
         ui->btn_resign->setEnabled(false);
+        ui->btn_draw->setEnabled(false);
         timer->stop();
 
         QStringList params = payload.split("\n");
@@ -180,9 +201,13 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
             gameBoard->drawTerritory(2, whiteTerritory);
         }
 
-        QString winner = blackScore > whiteScore ? "Black" : "White";
         if (blackScore >= 0 && whiteScore >= 0) {
-            ui->lbl_prompt->setText(QString("Black %1 : %2 White. %3 wins!").arg(blackScore).arg(whiteScore).arg(winner));
+            if (blackScore != whiteScore) {
+                QString winner = blackScore > whiteScore ? "Black" : "White";
+                ui->lbl_prompt->setText(QString("Black %1 : %2 White. %3 wins!").arg(blackScore).arg(whiteScore).arg(winner));
+            } else {
+                ui->lbl_prompt->setText(QString("Black %1 : %2 White. Tie game!").arg(blackScore).arg(whiteScore));
+            }
         }
         return;
     }
@@ -233,7 +258,7 @@ void GameWidget::on_btn_pass_clicked()
 {
     if (QMessageBox::question(
             this,
-            "Message",
+            "Confirmation",
             "Are you sure you want to pass?"
     ) == QMessageBox::Yes) {
         if (lastCoords != "") {
@@ -243,8 +268,10 @@ void GameWidget::on_btn_pass_clicked()
         lastColor = 0;
 
         socket->sendMessage("MOVE", QString("%1\nPA\n").arg(myColor));
-        if (timeSystem == 1)
+        if (timeSystem == 1) {
+            usleep(1000);
             socket->sendMessage("BYOYOM", QString("%1\n%2\n%3\n").arg(myColor).arg(timingType).arg(timeLeft));
+        }
         myTurn = false;
         gameBoard->setStoneShadowDisabled(true);
         ui->btn_pass->setEnabled(false);
@@ -259,23 +286,34 @@ void GameWidget::on_btn_resign_clicked()
 {
     if (QMessageBox::question(
             this,
-            "Message",
+            "Confirmation",
             "Are you sure you want to resign?"
     ) == QMessageBox::Yes) {
-        if (lastCoords != "") {
-            gameBoard->drawStone(lastColor, lastCoords, false);
-        }
-        lastCoords = "";
-        lastColor = 0;
+        // if (lastCoords != "") {
+        //     gameBoard->drawStone(lastColor, lastCoords, false);
+        // }
+        // lastCoords = "";
+        // lastColor = 0;
 
         socket->sendMessage("INTRPT", QString("%1\nRESIGN\n").arg(myColor));
-        myTurn = false;
-        gameBoard->setStoneShadowDisabled(true);
-        ui->btn_pass->setEnabled(false);
-        ui->btn_resign->setEnabled(false);
+        // myTurn = false;
+        // gameBoard->setStoneShadowDisabled(true);
+        // ui->btn_pass->setEnabled(false);
+        // ui->btn_resign->setEnabled(false);
         ui->lbl_prompt->setText(myColor == 1 ? "Black resigns. White wins!" : "White resigns. Black wins!");
         logTable->addRow(myColor, "RS");
-        timer->stop();
+        // timer->stop();
+    }
+}
+
+void GameWidget::on_btn_draw_clicked()
+{
+    if (QMessageBox::question(
+            this,
+            "Confirmation",
+            "Are you sure you want to offer a draw?"
+            ) == QMessageBox::Yes) {
+        socket->sendMessage("INTRPT", QString("%1\nDRAW\n").arg(myColor));
     }
 }
 
@@ -299,4 +337,5 @@ void GameWidget::on_btn_leave_clicked()
         MainWindow::getInstance()->previous();
     }
 }
+
 
