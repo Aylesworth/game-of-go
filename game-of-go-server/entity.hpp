@@ -26,14 +26,16 @@ struct GameRecord {
     string opponent;
     double blackScore;
     double whiteScore;
+    int eloChange;
     int64_t time;
 
     GameRecord() {}
 
     GameRecord(string id, int boardSize, int color, string opponent,
-               double blackScore, double whiteScore, int64_t time) :
+               double blackScore, double whiteScore, int eloChange, int64_t time) :
             id(id), boardSize(boardSize), color(color), opponent(opponent),
-            blackScore(blackScore), whiteScore(whiteScore), time(time) {}
+            blackScore(blackScore), whiteScore(whiteScore),
+            eloChange(eloChange), time(time) {}
 };
 
 struct GameReplay {

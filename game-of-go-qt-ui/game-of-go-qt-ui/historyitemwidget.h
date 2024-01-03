@@ -20,6 +20,7 @@ public:
         QString opponent,
         float blackScore,
         float whiteScore,
+        int eloChange,
         int64_t time,
         QWidget *parent = nullptr);
     ~HistoryItemWidget();

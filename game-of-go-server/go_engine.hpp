@@ -36,9 +36,9 @@ private:
     int boardSize;
     float komi;
     int timeSystem;
+    int byoyomiTimeSeconds;
     int mainTimeSeconds[3];
     int byoyomiPeriods[3];
-    int byoyomiTimeSeconds;
     int ranked;
     int boardRange;
     vector<int> board;
@@ -53,6 +53,8 @@ private:
     float whiteScore;
     string blackTerritory;
     string whiteTerritory;
+    int blackEloChange;
+    int whiteEloChange;
 
     void count(int pos, int color) {
         int piece = board[pos];
@@ -264,8 +266,10 @@ public:
         this->boardSize = boardSize;
         this->komi = komi;
         this->timeSystem = timeSystem;
+        this->mainTimeSeconds[0] = mainTimeSeconds;
         this->mainTimeSeconds[BLACK] = mainTimeSeconds;
         this->mainTimeSeconds[WHITE] = mainTimeSeconds;
+        this->byoyomiPeriods[0] = byoyomiPeriods;
         this->byoyomiPeriods[BLACK] = byoyomiPeriods;
         this->byoyomiPeriods[WHITE] = byoyomiPeriods;
         this->byoyomiTimeSeconds = byoyomiTimeSeconds;
@@ -622,6 +626,23 @@ public:
         whiteScore += captured[BLACK].size();
     }
 
+    void reset() {
+        timestamp = (int64_t) time(NULL);
+        mainTimeSeconds[BLACK] = mainTimeSeconds[0];
+        mainTimeSeconds[WHITE] = mainTimeSeconds[0];
+        byoyomiPeriods[BLACK] = byoyomiPeriods[0];
+        byoyomiPeriods[WHITE] = byoyomiPeriods[0];
+
+        for (int i = 0; i < boardRange * boardRange; i++) {
+            int row = i / boardRange;
+            int col = i % boardRange;
+            if (row < 1 || row > boardSize || col < 1 || col > boardSize)
+                board[i] = OFFBOARD;
+            else
+                board[i] = EMPTY;
+        }
+    }
+
     string getId() {
         return id;
     }
@@ -712,6 +733,22 @@ public:
 
     void setByoyomiPeriodsLeft(int color, int periods) {
         byoyomiPeriods[color] = periods;
+    }
+
+    int getBlackEloChange() {
+        return blackEloChange;
+    }
+
+    int getWhiteEloChange() {
+        return whiteEloChange;
+    }
+
+    void setBlackEloChange(int eloChange) {
+        blackEloChange = eloChange;
+    }
+
+    void setWhiteEloChange(int eloChange) {
+        whiteEloChange = eloChange;
     }
 };
 

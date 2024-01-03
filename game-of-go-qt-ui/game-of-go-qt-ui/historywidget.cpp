@@ -54,7 +54,8 @@ void HistoryWidget::onMessageReceived(QString msgtype, QString payload) {
                 params[3],
                 params[4].toFloat(),
                 params[5].toFloat(),
-                params[6].toLongLong(),
+                params[6].toInt(),
+                params[7].toLongLong(),
                 this
             ));
         }

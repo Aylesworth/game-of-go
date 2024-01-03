@@ -146,6 +146,12 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
             } else {
                 socket->sendMessage("INTRES", payload + "DECLINE\n");
             }
+        } else if (interruptType == "RESTART") {
+            if (QMessageBox::question(this, "Question", "Your opponent would like to start a new game. Do you agree?") == QMessageBox::Yes) {
+                socket->sendMessage("INTRES", payload + "ACCEPT\n");
+            } else {
+                socket->sendMessage("INTRES", payload + "DECLINE\n");
+            }
         } else if (interruptType == "TIMEOUT") {
             ui->lbl_prompt->setText(color == 1 ? "Black ran out of time. White wins!" : "White ran out of time. Black wins!");
             logTable->addRow(color, "TO");
@@ -166,6 +172,14 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
                 QMessageBox::information(this, "Information", "Your opponent has accepted your draw request.");
             } else {
                 QMessageBox::information(this, "Information", "Your opponent has declined your draw request.");
+            }
+        } else if (interruptType == "RESTART") {
+            if (reply == "ACCEPT") {
+                // QMessageBox::information(this, "Information", "Your opponent has agreed to start a new game.");
+            } else if (reply == "DECLINE") {
+                QMessageBox::information(this, "Information", "Your opponent has rejected to start a new game.");
+            } else if (reply == "LEFT") {
+                QMessageBox::information(this, "Information", "Your opponent has left the game.");
             }
         }
         return;
@@ -317,6 +331,17 @@ void GameWidget::on_btn_draw_clicked()
     }
 }
 
+void GameWidget::on_btn_new_game_clicked()
+{
+    if (QMessageBox::question(
+            this,
+            "Confirmation",
+            "Do you want to ask your opponent to start a new game?"
+            ) == QMessageBox::Yes) {
+        socket->sendMessage("INTRPT", QString("%1\nRESTART\n").arg(myColor));
+    }
+}
+
 bool GameWidget::handleCloseRequest() {
     if (gameFinished) return true;
     if (QMessageBox::question(
@@ -337,5 +362,6 @@ void GameWidget::on_btn_leave_clicked()
         MainWindow::getInstance()->previous();
     }
 }
+
 
 

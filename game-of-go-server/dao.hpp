@@ -106,7 +106,8 @@ bool doesGameIdExist(string id) {
 
 void saveGame(GoGame *game) {
     auto pstmt = con->prepareStatement(
-            "INSERT INTO game (id, time, board_size, black_player, white_player, log, black_score, white_score, black_territory, white_territory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            "INSERT INTO game (id, time, board_size, black_player, white_player, log, black_score, white_score, black_territory, white_territory, black_elo_change, white_elo_change) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     pstmt->setString(1, game->getId());
     pstmt->setInt64(2, game->getTimestamp());
     pstmt->setInt(3, game->getBoardSize());
@@ -117,12 +118,15 @@ void saveGame(GoGame *game) {
     pstmt->setDouble(8, game->getWhiteScore());
     pstmt->setString(9, game->getBlackTerritory());
     pstmt->setString(10, game->getWhiteTerritory());
+    pstmt->setInt(11, game->getBlackEloChange());
+    pstmt->setInt(12, game->getWhiteEloChange());
     pstmt->executeUpdate();
 }
 
 vector<GameRecord *> findGamesByPlayer(int playerId) {
     auto pstmt = con->prepareStatement(
-            "SELECT g.id, g.board_size, p1.id AS black_id, p1.username AS black_name, p2.id AS white_id, p2.username AS white_name, black_score, white_score, time "
+            "SELECT g.id, g.board_size, p1.id AS black_id, p1.username AS black_name, p2.id AS white_id, p2.username AS white_name, "
+            "black_score, white_score, black_elo_change, white_elo_change, time "
             "FROM game g "
             "JOIN account p1 ON p1.id = g.black_player "
             "JOIN account p2 ON p2.id = g.white_player "
@@ -136,12 +140,15 @@ vector<GameRecord *> findGamesByPlayer(int playerId) {
     while (rs->next()) {
         int color;
         string opponent;
+        int eloChange;
         if (rs->getInt("black_id") == playerId) {
             color = 1;
             opponent = rs->getString("white_name");
+            eloChange = rs->getInt("black_elo_change");
         } else {
             color = 2;
             opponent = rs->getString("black_name");
+            eloChange = rs->getInt("white_elo_change");
         }
         GameRecord *game = new GameRecord(
                 rs->getString("id"),
@@ -150,6 +157,7 @@ vector<GameRecord *> findGamesByPlayer(int playerId) {
                 opponent,
                 rs->getDouble("black_score"),
                 rs->getDouble("white_score"),
+                eloChange,
                 rs->getInt64("time")
         );
         games.push_back(game);

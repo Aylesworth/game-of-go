@@ -90,7 +90,11 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
         int mainTimeSeconds = timeParams[1].toInt();
         int byoyomiTimeSeconds = timeParams[2].toInt();
         int byoyomiPeriods = timeParams[3].toInt();
-        next(new GameWidget(boardSize, color, komi, timeSystem, mainTimeSeconds, byoyomiTimeSeconds, byoyomiPeriods));
+        if (qobject_cast<GameWidget *>(stackedWidget->currentWidget())) {
+            swap(new GameWidget(boardSize, color, komi, timeSystem, mainTimeSeconds, byoyomiTimeSeconds, byoyomiPeriods));
+        } else {
+            next(new GameWidget(boardSize, color, komi, timeSystem, mainTimeSeconds, byoyomiTimeSeconds, byoyomiPeriods));
+        }
         emit matchSetUp();
         emit matchSetUp(params[0]);
         return;
@@ -99,7 +103,7 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
 
 void MainWindow::closeEvent(QCloseEvent *event) {
     GameWidget *gameWidget;
-    if ((gameWidget = qobject_cast<GameWidget *>(centralWidget())) && !gameWidget->handleCloseRequest()) {
+    if ((gameWidget = qobject_cast<GameWidget *>(stackedWidget->currentWidget())) && !gameWidget->handleCloseRequest()) {
         event->ignore();
         return;
     }
@@ -107,8 +111,10 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 }
 
 void MainWindow::swap(QWidget *widget) {
-    stackedWidget->removeWidget(stackedWidget->currentWidget());
+    QWidget* w;
+    stackedWidget->removeWidget(w = stackedWidget->currentWidget());
     stackedWidget->setCurrentIndex(stackedWidget->addWidget(widget));
+    delete w;
 }
 
 void MainWindow::next(QWidget *widget) {

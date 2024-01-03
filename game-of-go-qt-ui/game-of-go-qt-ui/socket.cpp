@@ -81,6 +81,7 @@ void Socket::sendMessage(QString msgtype, QString payload) {
             "L", payload.size(),
             payload.toStdString().c_str());
     n_sent = send(sockfd, buff, strlen(buff), 0);
+    printf("Sent:\n%s\n", buff);
     if (n_sent < 0) {
         perror("Error");
         exit(EXIT_FAILURE);
