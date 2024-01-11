@@ -628,6 +628,7 @@ public:
 
     void reset() {
         timestamp = (int64_t) time(NULL);
+        log = "";
         mainTimeSeconds[BLACK] = mainTimeSeconds[0];
         mainTimeSeconds[WHITE] = mainTimeSeconds[0];
         byoyomiPeriods[BLACK] = byoyomiPeriods[0];
