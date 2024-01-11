@@ -633,14 +633,7 @@ public:
         byoyomiPeriods[BLACK] = byoyomiPeriods[0];
         byoyomiPeriods[WHITE] = byoyomiPeriods[0];
 
-        for (int i = 0; i < boardRange * boardRange; i++) {
-            int row = i / boardRange;
-            int col = i % boardRange;
-            if (row < 1 || row > boardSize || col < 1 || col > boardSize)
-                board[i] = OFFBOARD;
-            else
-                board[i] = EMPTY;
-        }
+        clearBoard();
     }
 
     string getId() {

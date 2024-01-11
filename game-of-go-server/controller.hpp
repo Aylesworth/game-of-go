@@ -60,16 +60,24 @@ struct MatchingInfo {
 
 vector <MatchingInfo> matching;
 
+pthread_mutex_t clientsMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t ctxMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t matchingMutex = PTHREAD_MUTEX_INITIALIZER;
+
 ClientInfo *findClientByUsername(string username) {
+    pthread_mutex_lock(&clientsMutex);
     for (const auto &client: clients) {
         if (client->account->username == username) {
+            pthread_mutex_unlock(&clientsMutex);
             return client;
         }
     }
+    pthread_mutex_unlock(&clientsMutex);
     return NULL;
 }
 
 void setInGameStatus(int sock) {
+    pthread_mutex_lock(&ctxMutex);
     ctx[sock].selfInfo->status = 1;
     for (auto &entry: ctx) {
         Context &c = entry.second;
@@ -77,6 +85,7 @@ void setInGameStatus(int sock) {
         if (it != c.challengers.end())
             c.challengers.erase(it);
     }
+    pthread_mutex_unlock(&ctxMutex);
 }
 
 void notifyOnlineStatusChange() {
@@ -88,18 +97,22 @@ void notifyOnlineStatusChange() {
 }
 
 void handleClientDisconnect(int sock) {
+    pthread_mutex_lock(&clientsMutex);
     for (auto it = clients.begin(); it != clients.end(); it++) {
         if ((*it)->socket == sock) {
             clients.erase(it);
             notifyOnlineStatusChange();
-            return;
+            break;
         }
     }
+    pthread_mutex_unlock(&clientsMutex);
 
+    pthread_mutex_lock(&ctxMutex);
     ctx[sock].selfInfo = NULL;
     ctx[sock].opponentInfo = NULL;
     ctx[sock].game = NULL;
     ctx[sock].challengers.clear();
+    pthread_mutex_unlock(&ctxMutex);
 }
 
 int sendMessage(int sock, const char *messageType, const char *payload) {
@@ -232,29 +245,32 @@ string calculateRankType(int elo) {
     return "9P";
 }
 
+int calculateEloChange(double result, int selfElo, int opponentElo) {
+    double winningChance = 1.0 / (1.0 + exp((opponentElo - selfElo) / 110.0));
+    double K = 1561.0 / 13 - 53.0 / 1300 * selfElo;
+    if (K < 10) K = 10;
+    int change = (int) round(K * (result - winningChance));
+    printf("new elo: %d + %.1f * (%.1f - %.3f) = %d\n", selfElo, K, result, winningChance, selfElo + change);
+    return change;
+}
+
 void updatePlayerRankings(GoGame *game, Account *p1, Account *p2) {
     if (!game->isRanked()) return;
 
-    double S1 = (p1->id == game->getBlackPlayerId() && game->getBlackScore() > game->getWhiteScore())
-                || (p1->id == game->getWhitePlayerId() && game->getWhiteScore() > game->getBlackScore())
-                ? 1 : (game->getBlackScore() == game->getWhiteScore() ? 0.5 : 0);
-    double SE1 = 1.0 / (1.0 + exp((p2->elo - p1->elo) / 110));
-    double K1 = -53.0 / 1300 * p1->elo + 1561.0 / 13;
-    int elo1_old = p1->elo;
-    int change1 = (int) round(K1 * (S1 - SE1));
+    double result1 = (p1->id == game->getBlackPlayerId() && game->getBlackScore() > game->getWhiteScore())
+                     || (p1->id == game->getWhitePlayerId() && game->getWhiteScore() > game->getBlackScore())
+                     ? 1 : (game->getBlackScore() == game->getWhiteScore() ? 0.5 : 0);
+    double result2 = 1 - result1;
+
+    int change1 = calculateEloChange(result1, p1->elo, p2->elo);
+    int change2 = calculateEloChange(result2, p2->elo, p1->elo);
+
     p1->elo += change1;
     p1->rankType = calculateRankType(p1->elo);
 
-    double S2 = 1 - S1;
-    double SE2 = 1 - SE1;
-    double K2 = -53.0 / 1300 * p2->elo + 1561.0 / 13;
-    int elo2_old = p2->elo;
-    int change2 = (int) round(K2 * (S2 - SE2));
     p2->elo += change2;
     p2->rankType = calculateRankType(p2->elo);
 
-    printf("R1 = %d + %.2f (%.4f - %.4f) = %d\n", elo1_old, K1, S1, SE1, p1->elo);
-    printf("R2 = %d + %.2f (%.4f - %.4f) = %d\n", elo2_old, K2, S2, SE2, p2->elo);
     game->setBlackEloChange(p1->id == game->getBlackPlayerId() ? change1 : change2);
     game->setWhiteEloChange(p1->id == game->getWhitePlayerId() ? change1 : change2);
     updateRanking(*p1);
@@ -285,12 +301,14 @@ void sendComputerMove(ClientInfo *player, GoGame *game, int color) {
             updatePlayerRankings(game, player->account, cpu);
             saveGame(game);
 
+            pthread_mutex_lock(&clientsMutex);
             for (ClientInfo *client: clients) {
                 if (client->socket == player->socket) {
                     client->status = 0;
                     notifyOnlineStatusChange();
                 }
             }
+            pthread_mutex_unlock(&clientsMutex);
             return;
         }
     }
@@ -299,6 +317,7 @@ void sendComputerMove(ClientInfo *player, GoGame *game, int color) {
 void setupGame(int sock1, int sock2, GoGame *game) {
     char buff[BUFF_SIZE];
     if (sock1 > 0 && sock2 > 0) {
+        pthread_mutex_lock(&ctxMutex);
         ClientInfo *player1 = ctx[sock1].selfInfo;
         ClientInfo *player2 = ctx[sock2].selfInfo;
 
@@ -316,6 +335,7 @@ void setupGame(int sock1, int sock2, GoGame *game) {
 
         ctx[sock1].game = game;
         ctx[sock2].game = game;
+        pthread_mutex_unlock(&ctxMutex);
 
         srand(time(NULL));
         int randomColor = rand() % 2 + 1;
@@ -361,6 +381,7 @@ void setupGame(int sock1, int sock2, GoGame *game) {
         if (sock1 == -1) sock = sock2;
         else sock = sock1;
 
+        pthread_mutex_lock(&ctxMutex);
         printf("Establish game between %s and %s\n", ctx[sock].selfInfo->account->username.c_str(), "@CPU");
 
         setInGameStatus(sock);
@@ -392,6 +413,7 @@ void setupGame(int sock1, int sock2, GoGame *game) {
         if (randomColor != 1) {
             sendComputerMove(ctx[sock].selfInfo, game, 3 - randomColor);
         }
+        pthread_mutex_unlock(&ctxMutex);
     }
 }
 
@@ -480,9 +502,13 @@ void *handleRequest(void *arg) {
             sendMessage(sock, "OK", "Signed in successfully");
 
             ClientInfo *info = new ClientInfo(sock, account, 0);
+            pthread_mutex_lock(&ctxMutex);
             ctx[sock].selfInfo = info;
+            pthread_mutex_unlock(&ctxMutex);
+            pthread_mutex_lock(&clientsMutex);
             clients.insert(info);
             notifyOnlineStatusChange();
+            pthread_mutex_unlock(&clientsMutex);
             continue;
         }
 
@@ -491,6 +517,7 @@ void *handleRequest(void *arg) {
             payload[0] = '\0';
             char content[BUFF_SIZE];
 
+            pthread_mutex_lock(&clientsMutex);
             for (const auto &client: clients) {
                 if (client->status != 0) continue;
                 if (client->account->username == ctx[sock].selfInfo->account->username) continue;
@@ -498,6 +525,7 @@ void *handleRequest(void *arg) {
                 sprintf(content, "%s (ELO %d)\n", client->account->username.c_str(), client->account->elo);
                 strcat(payload, content);
             }
+            pthread_mutex_unlock(&clientsMutex);
 
             sendMessage(sock, "LSTONL", payload);
             continue;
@@ -508,6 +536,7 @@ void *handleRequest(void *arg) {
             int boardSize = atoi(strtok(payload, "\n"));
 
             int matched = 0;
+            pthread_mutex_lock(&matchingMutex);
             for (MatchingInfo m: matching) {
                 if (sock != m.client->socket
                     && ctx[sock].selfInfo->account->rankType == m.client->account->rankType
@@ -528,17 +557,20 @@ void *handleRequest(void *arg) {
             if (!matched) {
                 matching.push_back(MatchingInfo(ctx[sock].selfInfo, boardSize));
             }
+            pthread_mutex_unlock(&matchingMutex);
             continue;
         }
 
         // Cancel matching
         if (strcmp(messageType, "MATCCL") == 0) {
+            pthread_mutex_lock(&matchingMutex);
             for (auto it = matching.begin(); it != matching.end(); it++) {
                 if ((*it).client->socket == sock) {
                     matching.erase(it);
                     break;
                 }
             }
+            pthread_mutex_unlock(&matchingMutex);
             continue;
         }
 
@@ -556,7 +588,9 @@ void *handleRequest(void *arg) {
                 int byoyomiPeriods = atoi(strtok(NULL, "\n"));
                 bool ranked = atoi(strtok(NULL, "\n"));
 
+                pthread_mutex_lock(&ctxMutex);
                 ctx[sock].opponentInfo = NULL;
+                pthread_mutex_unlock(&ctxMutex);
 
                 memset(buff, 0, BUFF_SIZE);
                 sprintf(buff, "%s\n%s\n", "@CPU", "ACCEPT");
@@ -567,12 +601,14 @@ void *handleRequest(void *arg) {
                 continue;
             }
 
+            pthread_mutex_lock(&ctxMutex);
             ctx[sock].opponentInfo = findClientByUsername(opponent);
             int oppsock = ctx[sock].opponentInfo->socket;
             ctx[oppsock].challengers.push_back(sock);
 
             memset(buff, 0, BUFF_SIZE);
             sprintf(buff, "%s\n%s\n", ctx[sock].selfInfo->account->username.c_str(), params);
+            pthread_mutex_unlock(&ctxMutex);
             sendMessage(oppsock, "INVITE", buff);
             continue;
         }
@@ -582,10 +618,12 @@ void *handleRequest(void *arg) {
             char *opponent = strtok(payload, "\n");
             int oppsock = findClientByUsername(opponent)->socket;
 
+            pthread_mutex_lock(&ctxMutex);
             auto it = find(ctx[oppsock].challengers.begin(), ctx[oppsock].challengers.end(), sock);
             if (it != ctx[oppsock].challengers.end()) {
                 ctx[oppsock].challengers.erase(it);
             }
+            pthread_mutex_unlock(&ctxMutex);
 
             continue;
         }
@@ -604,14 +642,17 @@ void *handleRequest(void *arg) {
 
             ClientInfo *opponentInfo = findClientByUsername(opponent);
 
+            pthread_mutex_lock(&ctxMutex);
             if (find(ctx[sock].challengers.begin(), ctx[sock].challengers.end(), opponentInfo->socket) ==
                 ctx[sock].challengers.end()) {
+                pthread_mutex_unlock(&ctxMutex);
                 sendMessage(sock, "INVCCL", "");
                 continue;
             }
 
             memset(buff, 0, BUFF_SIZE);
             sprintf(buff, "%s\n%s\n", ctx[sock].selfInfo->account->username.c_str(), reply);
+            pthread_mutex_unlock(&ctxMutex);
             sendMessage(opponentInfo->socket, "INVRES", buff);
 
             if (strcmp(reply, "ACCEPT") == 0) {
@@ -620,10 +661,12 @@ void *handleRequest(void *arg) {
                                      mainTimeSeconds, byoyomiTimeSeconds,
                                      byoyomiPeriods, ranked));
             } else {
+                pthread_mutex_lock(&ctxMutex);
                 ctx[sock].opponentInfo = NULL;
                 auto it = find(ctx[sock].challengers.begin(), ctx[sock].challengers.end(), opponentInfo->socket);
                 if (it != ctx[sock].challengers.end())
                     ctx[sock].challengers.erase(it);
+                pthread_mutex_unlock(&ctxMutex);
             }
             continue;
         }
@@ -649,12 +692,14 @@ void *handleRequest(void *arg) {
                     }
 
                     sendMessage(sock, "MOVE", buff);
+                    pthread_mutex_lock(&ctxMutex);
                     if (ctx[sock].opponentInfo != NULL) {
                         usleep(10000);
                         sendMessage(ctx[sock].opponentInfo->socket, "MOVE", buff);
                     } else {
                         sendComputerMove(ctx[sock].selfInfo, game, 3 - color);
                     }
+                    pthread_mutex_unlock(&ctxMutex);
                 } else {
                     sendMessage(sock, "MOVERR", "");
                 }
@@ -662,12 +707,14 @@ void *handleRequest(void *arg) {
                 if (game->pass(color) == 2) {
                     getGameResult(buff, game);
                     sendMessage(sock, "RESULT", buff);
+                    pthread_mutex_lock(&ctxMutex);
                     if (ctx[sock].opponentInfo != NULL) {
                         sendMessage(ctx[sock].opponentInfo->socket, "RESULT", buff);
                         updatePlayerRankings(game, ctx[sock].selfInfo->account, ctx[sock].opponentInfo->account);
                     } else {
                         updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
                     }
+                    pthread_mutex_unlock(&ctxMutex);
                     saveGame(game);
                 } else {
                     if (ctx[sock].opponentInfo == NULL) {
@@ -767,6 +814,8 @@ void *handleRequest(void *arg) {
                                 game->getBlackTerritory().c_str(), game->getWhiteTerritory().c_str());
 
                         sendMessage(sock, "RESULT", buff);
+
+                        pthread_mutex_lock(&ctxMutex);
                         if (ctx[sock].opponentInfo != NULL) {
                             sendMessage(ctx[sock].opponentInfo->socket, "RESULT", buff);
                             updatePlayerRankings(game, ctx[sock].selfInfo->account,
@@ -774,6 +823,7 @@ void *handleRequest(void *arg) {
                         } else {
                             updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
                         }
+                        pthread_mutex_unlock(&ctxMutex);
                         saveGame(game);
                     }
                 }
@@ -804,17 +854,21 @@ void *handleRequest(void *arg) {
 
                 usleep(10000);
                 sendMessage(sock, "RESULT", buff);
+
+                pthread_mutex_lock(&ctxMutex);
                 if (ctx[sock].opponentInfo != NULL) {
                     sendMessage(ctx[sock].opponentInfo->socket, "RESULT", buff);
                     updatePlayerRankings(game, ctx[sock].selfInfo->account, ctx[sock].opponentInfo->account);
                 } else {
                     updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
                 }
+                pthread_mutex_unlock(&ctxMutex);
                 saveGame(game);
                 continue;
             }
 
             if (strcmp(interruptType, "DRAW") == 0) {
+                pthread_mutex_lock(&ctxMutex);
                 if (ctx[sock].opponentInfo == NULL) {
                     memset(buff, 0, BUFF_SIZE);
                     sprintf(buff, "%d\n%s\n%s\n", color, interruptType, "ACCEPT");
@@ -835,10 +889,12 @@ void *handleRequest(void *arg) {
                     sprintf(buff, "%d\n%s\n", color, interruptType);
                     sendMessage(ctx[sock].opponentInfo->socket, "INTRPT", buff);
                 }
+                pthread_mutex_unlock(&ctxMutex);
                 continue;
             }
 
             if (strcmp(interruptType, "RESTART") == 0) {
+                pthread_mutex_lock(&ctxMutex);
                 if (ctx[sock].opponentInfo == NULL) {
                     game->reset();
                     setupGame(sock, -1, game);
@@ -854,6 +910,7 @@ void *handleRequest(void *arg) {
                         sendMessage(oppsock, "INTRPT", buff);
                     }
                 }
+                pthread_mutex_unlock(&ctxMutex);
             }
 
             continue;
@@ -881,6 +938,7 @@ void *handleRequest(void *arg) {
 
                     usleep(10000);
                     sendMessage(sock, "RESULT", buff);
+
                     sendMessage(ctx[sock].opponentInfo->socket, "RESULT", buff);
                     updatePlayerRankings(game, ctx[sock].selfInfo->account, ctx[sock].opponentInfo->account);
                     saveGame(game);
@@ -896,9 +954,11 @@ void *handleRequest(void *arg) {
 
         // Confirm game result
         if (strcmp(messageType, "RESACK") == 0) {
+            pthread_mutex_lock(&ctxMutex);
             ctx[sock].selfInfo->status = 0;
             ctx[sock].opponentInfo = NULL;
             ctx[sock].game = NULL;
+            pthread_mutex_unlock(&ctxMutex);
             notifyOnlineStatusChange();
             continue;
         }
