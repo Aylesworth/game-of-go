@@ -74,19 +74,23 @@ void RegisterWindow::submit()
 
 void RegisterWindow::onMessageReceived(QString msgtype, QString payload) {
     if (msgtype == "OK") {
-        QMessageBox::information(this, "Information", payload);
+        QStringList params = payload.split("\n", Qt::SkipEmptyParts);
+        if (params[0] != "REGIST") return;
+        QMessageBox::information(this, "Information", params[1]);
         this->hide();
         LoginWindow *w = new LoginWindow();
         w->move(1000, 500);
         w->show();
     } else if (msgtype == "ERROR") {
-        ui->lbl_error->setText(payload);
+        QStringList params = payload.split("\n", Qt::SkipEmptyParts);
+        if (params[0] != "REGIST") return;
+        ui->lbl_error->setText(params[1]);
     }
 }
 
 void RegisterWindow::on_lbl_login_linkActivated(const QString &link)
 {
-    this->hide();
+    this->close();
     LoginWindow *w = new LoginWindow();
     w->move(1000, 500);
     w->show();

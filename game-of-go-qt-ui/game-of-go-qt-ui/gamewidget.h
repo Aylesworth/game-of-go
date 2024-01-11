@@ -19,6 +19,8 @@ class GameWidget : public QWidget
 
 public:
     explicit GameWidget(
+        QString blackName,
+        QString whiteName,
         int boardSize,
         int myColor,
         double komi,

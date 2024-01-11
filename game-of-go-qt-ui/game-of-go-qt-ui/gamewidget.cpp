@@ -13,6 +13,8 @@
 #include <QTimer>
 
 GameWidget::GameWidget(
+    QString blackName,
+    QString whiteName,
     int boardSize,
     int myColor,
     double komi,
@@ -39,6 +41,8 @@ GameWidget::GameWidget(
     logTable = new LogTableWidget;
 
     scoreboard->setKomi(komi);
+    scoreboard->setBlackName(blackName);
+    scoreboard->setWhiteName(whiteName);
     scoreboard->setBlackCaptures(0);
     scoreboard->setWhiteCaptures(0);
     if (timeSystem == 0) {
@@ -234,6 +238,14 @@ void GameWidget::onMessageReceived(QString msgtype, QString payload) {
         timingType = params[1];
         timeLeft = params[2].toInt();
         timer->start();
+        return;
+    }
+
+    if (msgtype == "ELOCHG") {
+        QStringList params = payload.split("\n", Qt::SkipEmptyParts);
+        int eloChange = params[0].toInt();
+        int newElo = params[1].toInt();
+        QMessageBox::information(this, "Information", QString("ELO change after this game: %1\nYour new ELO: %2").arg(eloChange).arg(newElo));
         return;
     }
 }

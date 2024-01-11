@@ -77,7 +77,6 @@ ClientInfo *findClientByUsername(string username) {
 }
 
 void setInGameStatus(int sock) {
-    pthread_mutex_lock(&ctxMutex);
     ctx[sock].selfInfo->status = 1;
     for (auto &entry: ctx) {
         Context &c = entry.second;
@@ -85,7 +84,6 @@ void setInGameStatus(int sock) {
         if (it != c.challengers.end())
             c.challengers.erase(it);
     }
-    pthread_mutex_unlock(&ctxMutex);
 }
 
 void notifyOnlineStatusChange() {
@@ -254,8 +252,11 @@ int calculateEloChange(double result, int selfElo, int opponentElo) {
     return change;
 }
 
-void updatePlayerRankings(GoGame *game, Account *p1, Account *p2) {
+void updatePlayerRankings(GoGame *game, ClientInfo *client1, ClientInfo *client2) {
     if (!game->isRanked()) return;
+
+    Account *p1 = client1 == NULL ? cpu : client1->account;
+    Account *p2 = client2 == NULL ? cpu : client2->account;
 
     double result1 = (p1->id == game->getBlackPlayerId() && game->getBlackScore() > game->getWhiteScore())
                      || (p1->id == game->getWhitePlayerId() && game->getWhiteScore() > game->getBlackScore())
@@ -275,6 +276,11 @@ void updatePlayerRankings(GoGame *game, Account *p1, Account *p2) {
     game->setWhiteEloChange(p1->id == game->getWhitePlayerId() ? change1 : change2);
     updateRanking(*p1);
     updateRanking(*p2);
+
+    if (client1 != NULL && client1->socket > 0)
+        sendMessage(client1->socket, "ELOCHG", (to_string(change1) + "\n" + to_string(p1->elo) + "\n").c_str());
+    if (client2 != NULL && client2->socket > 0)
+        sendMessage(client2->socket, "ELOCHG", (to_string(change2) + "\n" + to_string(p2->elo) + "\n").c_str());
 }
 
 void sendComputerMove(ClientInfo *player, GoGame *game, int color) {
@@ -298,7 +304,7 @@ void sendComputerMove(ClientInfo *player, GoGame *game, int color) {
         if (game->pass(color) == 2) {
             getGameResult(buff, game);
             sendMessage(player->socket, "RESULT", buff);
-            updatePlayerRankings(game, player->account, cpu);
+            updatePlayerRankings(game, player, NULL);
             saveGame(game);
 
             pthread_mutex_lock(&clientsMutex);
@@ -317,7 +323,6 @@ void sendComputerMove(ClientInfo *player, GoGame *game, int color) {
 void setupGame(int sock1, int sock2, GoGame *game) {
     char buff[BUFF_SIZE];
     if (sock1 > 0 && sock2 > 0) {
-        pthread_mutex_lock(&ctxMutex);
         ClientInfo *player1 = ctx[sock1].selfInfo;
         ClientInfo *player2 = ctx[sock2].selfInfo;
 
@@ -335,20 +340,29 @@ void setupGame(int sock1, int sock2, GoGame *game) {
 
         ctx[sock1].game = game;
         ctx[sock2].game = game;
-        pthread_mutex_unlock(&ctxMutex);
 
         srand(time(NULL));
         int randomColor = rand() % 2 + 1;
 
-        game->setBlackPlayerId(
-                randomColor == 1 ? player1->account->id : player2->account->id);
-        game->setWhitePlayerId(
-                randomColor == 1 ? player2->account->id : player1->account->id);
+        Account *blackPlayer;
+        Account *whitePlayer;
+        if (randomColor == 1) {
+            blackPlayer = player1->account;
+            whitePlayer = player2->account;
+        } else {
+            blackPlayer = player2->account;
+            whitePlayer = player1->account;
+        }
+
+        game->setBlackPlayerId(blackPlayer->id);
+        game->setWhitePlayerId(whitePlayer->id);
 
         memset(buff, 0, BUFF_SIZE);
-        sprintf(buff, "%s (ELO %d)\n%d\n%d\n%.2f\n%d %d %d %d\n",
+        sprintf(buff, "%s (ELO %d)\n%s %s\n%d\n%d\n%.2f\n%d %d %d %d\n",
                 player2->account->username.c_str(),
                 player2->account->elo,
+                blackPlayer->username.c_str(),
+                whitePlayer->username.c_str(),
                 game->getBoardSize(), randomColor,
                 game->getKomi(),
                 game->getTimeSystem(),
@@ -358,9 +372,11 @@ void setupGame(int sock1, int sock2, GoGame *game) {
         sendMessage(sock1, "SETUP", buff);
 
         memset(buff, 0, BUFF_SIZE);
-        sprintf(buff, "%s (ELO %d)\n%d\n%d\n%.2f\n%d %d %d %d\n",
+        sprintf(buff, "%s (ELO %d)\n%s %s\n%d\n%d\n%.2f\n%d %d %d %d\n",
                 player1->account->username.c_str(),
                 player1->account->elo,
+                blackPlayer->username.c_str(),
+                whitePlayer->username.c_str(),
                 game->getBoardSize(), 3 - randomColor,
                 game->getKomi(),
                 game->getTimeSystem(),
@@ -381,7 +397,6 @@ void setupGame(int sock1, int sock2, GoGame *game) {
         if (sock1 == -1) sock = sock2;
         else sock = sock1;
 
-        pthread_mutex_lock(&ctxMutex);
         printf("Establish game between %s and %s\n", ctx[sock].selfInfo->account->username.c_str(), "@CPU");
 
         setInGameStatus(sock);
@@ -393,12 +408,24 @@ void setupGame(int sock1, int sock2, GoGame *game) {
         srand(time(NULL));
         int randomColor = rand() % 2 + 1;
 
-        game->setBlackPlayerId(randomColor == 1 ? ctx[sock].selfInfo->account->id : -1);
-        game->setWhitePlayerId(randomColor == 1 ? -1 : ctx[sock].selfInfo->account->id);
+        Account *blackPlayer;
+        Account *whitePlayer;
+        if (randomColor == 1) {
+            blackPlayer = ctx[sock].selfInfo->account;
+            whitePlayer = cpu;
+        } else {
+            blackPlayer = cpu;
+            whitePlayer = ctx[sock].selfInfo->account;
+        }
+
+        game->setBlackPlayerId(blackPlayer->id);
+        game->setWhitePlayerId(whitePlayer->id);
 
         memset(buff, 0, BUFF_SIZE);
-        sprintf(buff, "CPU (ELO %d)\n%d\n%d\n%.2f\n%d %d %d %d\n",
+        sprintf(buff, "CPU (ELO %d)\n%s %s\n%d\n%d\n%.2f\n%d %d %d %d\n",
                 cpu->elo,
+                blackPlayer->username.c_str(),
+                whitePlayer->username.c_str(),
                 game->getBoardSize(),
                 randomColor,
                 game->getKomi(),
@@ -413,7 +440,6 @@ void setupGame(int sock1, int sock2, GoGame *game) {
         if (randomColor != 1) {
             sendComputerMove(ctx[sock].selfInfo, game, 3 - randomColor);
         }
-        pthread_mutex_unlock(&ctxMutex);
     }
 }
 
@@ -435,7 +461,7 @@ void generateMatches(int number) {
                 int p = game->pass(color);
                 if (p == 2) {
                     game->calculateScore();
-                    updatePlayerRankings(game, players[0], players[1]);
+                    updatePlayerRankings(game, new ClientInfo(-1, players[0], 0), new ClientInfo(-1, players[1], 0));
                     saveGame(game);
                     printf("%.1f %.1f\n", game->getBlackScore(), game->getWhiteScore());
                     break;
@@ -461,7 +487,7 @@ void *handleRequest(void *arg) {
             char *password = strtok(NULL, "\n");
 
             if (findAccount(username) != NULL) {
-                sendMessage(sock, "ERROR", "Username already used");
+                sendMessage(sock, "ERROR", "REGIST\nUsername already used\n");
                 continue;
             }
 
@@ -470,7 +496,7 @@ void *handleRequest(void *arg) {
             account.password = encodeMD5(password);
 
             createAccount(account);
-            sendMessage(sock, "OK", "Account created successfully");
+            sendMessage(sock, "OK", "REGIST\nAccount created successfully\n");
             continue;
         }
 
@@ -481,25 +507,25 @@ void *handleRequest(void *arg) {
 
             ClientInfo *client = findClientByUsername(username);
             if (client != NULL) {
-                sendMessage(sock, "ERROR", "Account is currently logged in");
+                sendMessage(sock, "ERROR", "LOGIN\nAccount is currently logged in\n");
                 continue;
             }
 
             Account *account = findAccount(username);
             if (account == NULL) {
-                sendMessage(sock, "ERROR", "Wrong username or password");
+                sendMessage(sock, "ERROR", "LOGIN\nWrong username or password\n");
                 continue;
             }
 
             string passwordHash = encodeMD5(password);
             if (passwordHash != account->password) {
-                sendMessage(sock, "ERROR", "Wrong username or password");
+                sendMessage(sock, "ERROR", "LOGIN\nWrong username or password\n");
                 continue;
             }
 
             account->password = "";
 
-            sendMessage(sock, "OK", "Signed in successfully");
+            sendMessage(sock, "OK", "LOGIN\nLogin successfully\n");
 
             ClientInfo *info = new ClientInfo(sock, account, 0);
             pthread_mutex_lock(&ctxMutex);
@@ -710,9 +736,9 @@ void *handleRequest(void *arg) {
                     pthread_mutex_lock(&ctxMutex);
                     if (ctx[sock].opponentInfo != NULL) {
                         sendMessage(ctx[sock].opponentInfo->socket, "RESULT", buff);
-                        updatePlayerRankings(game, ctx[sock].selfInfo->account, ctx[sock].opponentInfo->account);
+                        updatePlayerRankings(game, ctx[sock].selfInfo, ctx[sock].opponentInfo);
                     } else {
-                        updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
+                        updatePlayerRankings(game, ctx[sock].selfInfo, NULL);
                     }
                     pthread_mutex_unlock(&ctxMutex);
                     saveGame(game);
@@ -732,7 +758,7 @@ void *handleRequest(void *arg) {
 
                             getGameResult(buff, game);
                             sendMessage(sock, "RESULT", buff);
-                            updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
+                            updatePlayerRankings(game, ctx[sock].selfInfo, NULL);
                             saveGame(game);
                             continue;
                         }
@@ -818,10 +844,9 @@ void *handleRequest(void *arg) {
                         pthread_mutex_lock(&ctxMutex);
                         if (ctx[sock].opponentInfo != NULL) {
                             sendMessage(ctx[sock].opponentInfo->socket, "RESULT", buff);
-                            updatePlayerRankings(game, ctx[sock].selfInfo->account,
-                                                 ctx[sock].opponentInfo->account);
+                            updatePlayerRankings(game, ctx[sock].selfInfo, ctx[sock].opponentInfo);
                         } else {
-                            updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
+                            updatePlayerRankings(game, ctx[sock].selfInfo, NULL);
                         }
                         pthread_mutex_unlock(&ctxMutex);
                         saveGame(game);
@@ -858,9 +883,9 @@ void *handleRequest(void *arg) {
                 pthread_mutex_lock(&ctxMutex);
                 if (ctx[sock].opponentInfo != NULL) {
                     sendMessage(ctx[sock].opponentInfo->socket, "RESULT", buff);
-                    updatePlayerRankings(game, ctx[sock].selfInfo->account, ctx[sock].opponentInfo->account);
+                    updatePlayerRankings(game, ctx[sock].selfInfo, ctx[sock].opponentInfo);
                 } else {
-                    updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
+                    updatePlayerRankings(game, ctx[sock].selfInfo, NULL);
                 }
                 pthread_mutex_unlock(&ctxMutex);
                 saveGame(game);
@@ -882,7 +907,6 @@ void *handleRequest(void *arg) {
 
                     usleep(10000);
                     sendMessage(sock, "RESULT", buff);
-                    updatePlayerRankings(game, ctx[sock].selfInfo->account, cpu);
                     saveGame(game);
                 } else {
                     memset(buff, 0, BUFF_SIZE);
@@ -940,7 +964,6 @@ void *handleRequest(void *arg) {
                     sendMessage(sock, "RESULT", buff);
 
                     sendMessage(ctx[sock].opponentInfo->socket, "RESULT", buff);
-                    updatePlayerRankings(game, ctx[sock].selfInfo->account, ctx[sock].opponentInfo->account);
                     saveGame(game);
                 }
             } else if (strcmp(interruptType, "RESTART") == 0) {

@@ -81,19 +81,24 @@ void MainWindow::onMessageReceived(QString msgtype, QString payload) {
 
     if (msgtype == "SETUP") {
         QStringList params = payload.split("\n", Qt::SkipEmptyParts);
-        QStringList timeParams = params[4].split(" ", Qt::SkipEmptyParts);
+        QStringList names = params[1].split(" ", Qt::SkipEmptyParts);
+        QStringList timeParams = params[5].split(" ", Qt::SkipEmptyParts);
 
-        int boardSize = params[1].toInt();
-        int color = params[2].toInt();
-        double komi = params[3].toDouble();
+        QString blackName = names[0];
+        QString whiteName = names[1];
+        int boardSize = params[2].toInt();
+        int color = params[3].toInt();
+        double komi = params[4].toDouble();
         int timeSystem = timeParams[0].toInt();
         int mainTimeSeconds = timeParams[1].toInt();
         int byoyomiTimeSeconds = timeParams[2].toInt();
         int byoyomiPeriods = timeParams[3].toInt();
+
+        GameWidget *gameWidget = new GameWidget(blackName, whiteName, boardSize, color, komi, timeSystem, mainTimeSeconds, byoyomiTimeSeconds, byoyomiPeriods);
         if (qobject_cast<GameWidget *>(stackedWidget->currentWidget())) {
-            swap(new GameWidget(boardSize, color, komi, timeSystem, mainTimeSeconds, byoyomiTimeSeconds, byoyomiPeriods));
+            swap(gameWidget);
         } else {
-            next(new GameWidget(boardSize, color, komi, timeSystem, mainTimeSeconds, byoyomiTimeSeconds, byoyomiPeriods));
+            next(gameWidget);
         }
         emit matchSetUp();
         emit matchSetUp(params[0]);

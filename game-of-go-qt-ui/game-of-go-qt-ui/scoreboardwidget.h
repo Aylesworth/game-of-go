@@ -18,6 +18,10 @@ public:
     void disableTimeControl();
     void disableByoyomi();
     void setKomi(double komi);
+    QString getBlackName();
+    QString getWhiteName();
+    void setBlackName(QString name);
+    void setWhiteName(QString name);
     int getBlackCaptures();
     int getWhiteCaptures();
     void setBlackCaptures(int captures);
@@ -37,6 +41,7 @@ public:
 
 private:
     Ui::ScoreboardWidget *ui;
+    QString blackName, whiteName;
     int blackCaptures, whiteCaptures;
     int blackMainTime, whiteMainTime;
     int blackByoyomiTime, whiteByoyomiTime;
