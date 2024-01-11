@@ -39,6 +39,7 @@ GameWidget::GameWidget(
     gameBoard = new GameBoardWidget(boardSize, myColor, this);
     scoreboard = new ScoreboardWidget;
     logTable = new LogTableWidget;
+    chatWidget = new ChatWidget;
 
     scoreboard->setKomi(komi);
     scoreboard->setBlackName(blackName);
@@ -57,9 +58,11 @@ GameWidget::GameWidget(
     }
 
     ui->leftVBox->addWidget(gameBoard);
-    ui->rightVBox->setSpacing(20);
+    ui->rightVBox->setSpacing(30);
     ui->rightVBox->addWidget(scoreboard);
     ui->rightVBox->addWidget(logTable);
+    if (blackName != "@CPU" && whiteName != "@CPU")
+        ui->rightVBox->addWidget(chatWidget);
 
     ui->btn_pass->setEnabled(myTurn);
     ui->lbl_prompt->setText(QString("You are %1. Black's turn").arg(myColor == 1 ? "black" : "white"));
@@ -78,6 +81,7 @@ GameWidget::~GameWidget()
 }
 
 void GameWidget::onGameBoardClicked(QString coords) {
+    if (!myTurn) return;
     socket->sendMessage("MOVE", QString("%1\n%2\n").arg(myColor).arg(coords));
     if (timeSystem == 1) {
         usleep(1000);

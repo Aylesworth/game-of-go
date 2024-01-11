@@ -35,7 +35,7 @@ ReplayWidget::ReplayWidget(
 {
     ui->setupUi(this);
     ui->leftVBox_2->addWidget(gameBoard);
-    ui->rightVBox_2->setSpacing(20);
+    ui->rightVBox_2->setSpacing(30);
     ui->rightVBox_2->addWidget(scoreboard);
     ui->rightVBox_2->addWidget(logTable);
     ui->lbl_prompt->setText(QString("You are %1. Black's turn").arg(playerColor == 1 ? "black" : "white"));

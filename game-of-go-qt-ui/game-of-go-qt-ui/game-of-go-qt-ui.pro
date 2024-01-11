@@ -32,7 +32,8 @@ HEADERS += gameboardwidget.h \
            historyitemwidget.h \
            replaywidget.h \
            rankingswidget.h \
-           gameconfigwindow.h
+           gameconfigwindow.h \
+           chatwidget.h
 FORMS += gameboardwidget.ui \
          loginwindow.ui \
          registerwindow.ui \
@@ -49,7 +50,8 @@ FORMS += gameboardwidget.ui \
          historyitemwidget.ui \
          replaywidget.ui \
          rankingswidget.ui \
-         gameconfigwindow.ui
+         gameconfigwindow.ui \
+         chatwidget.ui
 SOURCES += gameboardwidget.cpp \
            loginwindow.cpp \
            registerwindow.cpp \
@@ -68,4 +70,5 @@ SOURCES += gameboardwidget.cpp \
            historyitemwidget.cpp \
            replaywidget.cpp \
            rankingswidget.cpp \
-           gameconfigwindow.cpp
+           gameconfigwindow.cpp \
+           chatwidget.cpp

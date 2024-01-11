@@ -4,6 +4,7 @@
 #include "gameboardwidget.h"
 #include "scoreboardwidget.h"
 #include "logtablewidget.h"
+#include "chatwidget.h"
 #include "socket.h"
 
 #include <QWidget>
@@ -48,6 +49,7 @@ private:
     GameBoardWidget *gameBoard;
     ScoreboardWidget *scoreboard;
     LogTableWidget *logTable;
+    ChatWidget *chatWidget;
     int myColor;
     bool myTurn;
     bool gameFinished;

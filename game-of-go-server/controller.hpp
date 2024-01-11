@@ -986,6 +986,21 @@ void *handleRequest(void *arg) {
             continue;
         }
 
+        // Chat in game
+        if (strcmp(messageType, "CHAT") == 0) {
+            const char *chatMessage = strtok(payload, "\n");
+            int64_t timestamp = (int64_t) time(NULL);
+            const char *sender = ctx[sock].selfInfo->account->username.c_str();
+
+            memset(buff, 0, BUFF_SIZE);
+            sprintf(buff, "%s\n%ld\n%s\n", sender, timestamp, chatMessage);
+            sendMessage(sock, "CHAT", buff);
+            if (ctx[sock].opponentInfo != NULL) {
+                sendMessage(ctx[sock].opponentInfo->socket, "CHAT", buff);
+            }
+            continue;
+        }
+
         // Get history of played games
         if (strcmp(messageType, "HISTRY") == 0) {
             vector < GameRecord * > games = findGamesByPlayer(ctx[sock].selfInfo->account->id);
