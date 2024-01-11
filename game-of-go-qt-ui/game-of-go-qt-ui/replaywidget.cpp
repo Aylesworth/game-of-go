@@ -85,7 +85,6 @@ void ReplayWidget::play() {
     connect(ui->btn_play, &QPushButton::clicked, this, &ReplayWidget::pause);
     timer->start();
     onTimeout();
-    qDebug() << "Playing...";
 }
 
 void ReplayWidget::pause() {

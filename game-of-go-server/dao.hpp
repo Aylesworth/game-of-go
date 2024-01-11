@@ -168,12 +168,13 @@ vector<GameRecord *> findGamesByPlayer(int playerId) {
 
 GameReplay *getGameReplayInfo(string gameId) {
     auto pstmt = con->prepareStatement(
-            "SELECT log, black_territory, white_territory FROM game WHERE id = ?");
+            "SELECT id, log, black_territory, white_territory FROM game WHERE id = ?");
     pstmt->setString(1, gameId);
     auto rs = pstmt->executeQuery();
 
     if (rs->next()) {
         return new GameReplay(
+                rs->getString("id"),
                 rs->getString("log"),
                 rs->getString("black_territory"),
                 rs->getString("white_territory")

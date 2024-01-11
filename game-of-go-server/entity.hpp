@@ -39,14 +39,15 @@ struct GameRecord {
 };
 
 struct GameReplay {
+    string id;
     string log;
     string blackTerritory;
     string whiteTerritory;
 
     GameReplay() {}
 
-    GameReplay(string log, string blackTerritory, string whiteTerritory) :
-            log(log), blackTerritory(blackTerritory), whiteTerritory(whiteTerritory) {}
+    GameReplay(string id, string log, string blackTerritory, string whiteTerritory) :
+            id(id), log(log), blackTerritory(blackTerritory), whiteTerritory(whiteTerritory) {}
 };
 
 struct Stats {

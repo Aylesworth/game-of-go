@@ -1006,13 +1006,11 @@ void *handleRequest(void *arg) {
         // Get game replay
         if (strcmp(messageType, "REPLAY") == 0) {
             char *id = strtok(payload, "\n");
-            printf("id = %s\n", id);
             GameReplay *replay = getGameReplayInfo(id);
-            printf("replay = %p\n", replay);
-            const char *data = (string(payload) + "\n" + replay->log + "\n" + replay->blackTerritory + " \n" +
-                                replay->whiteTerritory +
-                                " \n").c_str();
-            sendMessage(sock, "REPLAY", data);
+            memset(payload, 0, 16 * BUFF_SIZE);
+            sprintf(payload, "%s\n%s\n%s\n%s\n", replay->id.c_str(), replay->log.c_str(),
+                    replay->blackTerritory.c_str(), replay->whiteTerritory.c_str());
+            sendMessage(sock, "REPLAY", payload);
             continue;
         }
 
