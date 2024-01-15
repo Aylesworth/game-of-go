@@ -1,0 +1,32 @@
+[2024-01-16 02:50:13]: Server started
+[2024-01-16 02:50:22]: Client 127.0.0.1:49822 sent login request as 'nda2105'
+[2024-01-16 02:50:22]: Client 127.0.0.1:49822 logged in as 'nda2105'
+[2024-01-16 02:50:27]: Client 127.0.0.1:49822 sent login request as 'abc'
+[2024-01-16 02:50:27]: Client 127.0.0.1:49822 logged in as 'abc'
+[2024-01-16 02:50:32]: 'abc' requested their game statistics
+[2024-01-16 02:50:32]: 'abc' requested their game history
+[2024-01-16 02:50:35]: 'abc' requested the record for game 'XxZSa3BZVfWQDi4R'
+[2024-01-16 02:50:48]: 'abc' requested auto-matching
+[2024-01-16 02:50:52]: 'nda2105' requested auto-matching
+[2024-01-16 02:50:54]: 'nda2105' canceled auto-matching
+[2024-01-16 02:50:58]: 'abc' canceled auto-matching
+[2024-01-16 02:51:54]: 'abc' invited '@CPU' for a game
+[2024-01-16 02:51:54]: Game established between 'abc' and '@CPU': 'lð»'
+[2024-01-16 02:52:02]: 'abc' offered a restart for game '0¸ð»'
+[2024-01-16 02:52:02]: Game established between 'abc' and '@CPU': '0¸ð»'
+[2024-01-16 02:52:10]: 'nda2105' disconnected
+[2024-01-16 02:56:45]: Server started
+[2024-01-16 03:03:51]: Server started
+[2024-01-16 03:03:58]: Client 127.0.0.1:56576 sent login request as 'nda2105'
+[2024-01-16 03:03:58]: Client 127.0.0.1:56576 logged in as 'nda2105'
+[2024-01-16 03:04:07]: 'nda2105' disconnected
+[2024-01-16 03:04:10]: Client '127.0.0.1:56576' disconnected
+[2024-01-16 03:05:25]: Server started
+[2024-01-16 03:05:33]: Client 127.0.0.1:37788 sent login request as 'abc'
+[2024-01-16 03:05:33]: Client 127.0.0.1:37788 logged in as 'abc'
+[2024-01-16 03:05:36]: 'abc' requested the rankings table
+[2024-01-16 03:05:55]: 'abc' invited '@CPU' for a game
+[2024-01-16 03:05:55]: Game established between 'abc' and '@CPU': '0UfmGgxmP5POcJDC'
+[2024-01-16 03:06:00]: 'abc' offered a restart for game '0UfmGgxmP5POcJDC'
+[2024-01-16 03:06:00]: Game established between 'abc' and '@CPU': 'uqLl4GXZDdom7Ze2'
+[2024-01-16 03:06:37]: 'abc' disconnected

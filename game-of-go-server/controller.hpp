@@ -7,6 +7,7 @@
 
 #include "dao.hpp"
 #include "go_engine.hpp"
+#include "logging.hpp"
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
@@ -22,6 +23,11 @@ using namespace std;
 int sendMessage(int, const char *, const char *);
 
 int receiveMessage(int, char *, char *);
+
+struct thread_ctx {
+    int sockfd;
+    char *addr;
+};
 
 struct ClientInfo {
     int socket;
@@ -42,6 +48,7 @@ set<ClientInfo *> clients;
 Account *cpu = findAccount("@CPU");
 
 struct Context {
+    char *addr;
     ClientInfo *selfInfo;
     ClientInfo *opponentInfo;
     vector<int> challengers;
@@ -95,6 +102,10 @@ void notifyOnlineStatusChange() {
 }
 
 void handleClientDisconnect(int sock) {
+    if (ctx[sock].selfInfo != NULL) {
+        log("'%s' disconnected", ctx[sock].selfInfo->account->username.c_str());
+    }
+
     pthread_mutex_lock(&clientsMutex);
     for (auto it = clients.begin(); it != clients.end(); it++) {
         if ((*it)->socket == sock) {
@@ -152,7 +163,7 @@ int receiveMessage(int sock, char *messageType, char *payload) {
         memset(buff, 0, BUFF_SIZE);
         int bytesReceived = recv(sock, buff, BUFF_SIZE - 1, 0);
         if (bytesReceived <= 0) {
-            printf("Socket %d closed.\n", sock);
+            printf("Connection on %s closed.\n", ctx[sock].addr);
             handleClientDisconnect(sock);
             return 0;
         }
@@ -357,6 +368,11 @@ void setupGame(int sock1, int sock2, GoGame *game) {
         game->setBlackPlayerId(blackPlayer->id);
         game->setWhitePlayerId(whitePlayer->id);
 
+        log("Game established between '%s' and '%s': '%s'",
+            player1->account->username.c_str(),
+            player2->account->username.c_str(),
+            game->getId().c_str());
+
         memset(buff, 0, BUFF_SIZE);
         sprintf(buff, "%s (ELO %d)\n%s %s\n%d\n%d\n%.2f\n%d %d %d %d\n",
                 player2->account->username.c_str(),
@@ -421,6 +437,11 @@ void setupGame(int sock1, int sock2, GoGame *game) {
         game->setBlackPlayerId(blackPlayer->id);
         game->setWhitePlayerId(whitePlayer->id);
 
+        log("Game established between '%s' and '%s': '%s'",
+            ctx[sock].selfInfo->account->username.c_str(),
+            "@CPU",
+            game->getId().c_str());
+
         memset(buff, 0, BUFF_SIZE);
         sprintf(buff, "CPU (ELO %d)\n%s %s\n%d\n%d\n%.2f\n%d %d %d %d\n",
                 cpu->elo,
@@ -476,9 +497,14 @@ void generateMatches(int number) {
 void *handleRequest(void *arg) {
     pthread_detach(pthread_self());
 
-    int sock = *(int *) arg;
+    thread_ctx args = *(thread_ctx *) arg;
+    int sock = args.sockfd;
+    char *addr = args.addr;
+    ctx[sock].addr = addr;
+
     char messageType[10], payload[16 * BUFF_SIZE];
     char buff[BUFF_SIZE];
+    char uname[255];
 
     while (receiveMessage(sock, messageType, payload)) {
         // Register account
@@ -486,8 +512,11 @@ void *handleRequest(void *arg) {
             char *username = strtok(payload, "\n");
             char *password = strtok(NULL, "\n");
 
+            log("Client %s sent register request with username '%s'", addr, username);
+
             if (findAccount(username) != NULL) {
                 sendMessage(sock, "ERROR", "REGIST\nUsername already used\n");
+                log("Client %s failed to register with username '%s'", addr, username);
                 continue;
             }
 
@@ -497,6 +526,7 @@ void *handleRequest(void *arg) {
 
             createAccount(account);
             sendMessage(sock, "OK", "REGIST\nAccount created successfully\n");
+            log("Client %s registered with username '%s'", addr, username);
             continue;
         }
 
@@ -505,27 +535,35 @@ void *handleRequest(void *arg) {
             char *username = strtok(payload, "\n");
             char *password = strtok(NULL, "\n");
 
+            log("Client %s sent login request as '%s'", addr, username);
+
             ClientInfo *client = findClientByUsername(username);
             if (client != NULL) {
                 sendMessage(sock, "ERROR", "LOGIN\nAccount is currently logged in\n");
+                log("Client %s failed to login as '%s'", addr, username);
                 continue;
             }
 
             Account *account = findAccount(username);
             if (account == NULL) {
                 sendMessage(sock, "ERROR", "LOGIN\nWrong username or password\n");
+                log("Client %s failed to login as '%s'", addr, username);
                 continue;
             }
 
             string passwordHash = encodeMD5(password);
             if (passwordHash != account->password) {
                 sendMessage(sock, "ERROR", "LOGIN\nWrong username or password\n");
+                log("Client %s failed to login as '%s'", addr, username);
                 continue;
             }
 
             account->password = "";
 
             sendMessage(sock, "OK", "LOGIN\nLogin successfully\n");
+            log("Client %s logged in as '%s'", addr, username);
+            memset(uname, 0, 255);
+            strcpy(uname, username);
 
             ClientInfo *info = new ClientInfo(sock, account, 0);
             pthread_mutex_lock(&ctxMutex);
@@ -540,6 +578,8 @@ void *handleRequest(void *arg) {
 
         // Get online player list
         if (strcmp(messageType, "LSTONL") == 0) {
+            log("'%s' requested online player list", uname);
+
             payload[0] = '\0';
             char content[BUFF_SIZE];
 
@@ -559,6 +599,7 @@ void *handleRequest(void *arg) {
 
         // Auto-matching
         if (strcmp(messageType, "MATCH") == 0) {
+            log("'%s' requested auto-matching", uname);
             int boardSize = atoi(strtok(payload, "\n"));
 
             int matched = 0;
@@ -567,6 +608,7 @@ void *handleRequest(void *arg) {
                 if (sock != m.client->socket
                     && ctx[sock].selfInfo->account->rankType == m.client->account->rankType
                     && boardSize == m.boardSize) {
+                    log("Auto-matched '%s' with '%s'", uname, m.client->account->username);
                     matched = 1;
                     for (auto it = matching.begin(); it != matching.end(); it++) {
                         if ((*it).client->socket == m.client->socket) {
@@ -589,6 +631,8 @@ void *handleRequest(void *arg) {
 
         // Cancel matching
         if (strcmp(messageType, "MATCCL") == 0) {
+            log("'%s' canceled auto-matching", uname);
+
             pthread_mutex_lock(&matchingMutex);
             for (auto it = matching.begin(); it != matching.end(); it++) {
                 if ((*it).client->socket == sock) {
@@ -604,6 +648,8 @@ void *handleRequest(void *arg) {
         if (strcmp(messageType, "INVITE") == 0) {
             char *opponent = strtok(payload, "\n");
             char *params = payload + strlen(opponent) + 1;
+
+            log("'%s' invited '%s' for a game", uname, opponent);
 
             if (strcmp(opponent, "@CPU") == 0) {
                 int boardSize = atoi(strtok(params, "\n"));
@@ -644,6 +690,8 @@ void *handleRequest(void *arg) {
             char *opponent = strtok(payload, "\n");
             int oppsock = findClientByUsername(opponent)->socket;
 
+            log("'%s' canceled inviting '%s'", uname, opponent);
+
             pthread_mutex_lock(&ctxMutex);
             auto it = find(ctx[oppsock].challengers.begin(), ctx[oppsock].challengers.end(), sock);
             if (it != ctx[oppsock].challengers.end()) {
@@ -682,11 +730,13 @@ void *handleRequest(void *arg) {
             sendMessage(opponentInfo->socket, "INVRES", buff);
 
             if (strcmp(reply, "ACCEPT") == 0) {
+                log("'%s' accepted invitation from '%s'", uname, opponent);
                 setupGame(sock, opponentInfo->socket,
                           new GoGame(boardSize, komi, timeSystem,
                                      mainTimeSeconds, byoyomiTimeSeconds,
                                      byoyomiPeriods, ranked));
             } else {
+                log("'%s' declined invitation from '%s'", uname, opponent);
                 pthread_mutex_lock(&ctxMutex);
                 ctx[sock].opponentInfo = NULL;
                 auto it = find(ctx[sock].challengers.begin(), ctx[sock].challengers.end(), opponentInfo->socket);
@@ -865,6 +915,7 @@ void *handleRequest(void *arg) {
             char *interruptType = strtok(NULL, "\n");
 
             if (strcmp(interruptType, "RESIGN") == 0) {
+                log("'%s' resigned the game '%s'", uname, game->getId().c_str());
                 if (ctx[sock].opponentInfo != NULL) {
                     memset(buff, 0, BUFF_SIZE);
                     sprintf(buff, "%d\nRESIGN\n", color);
@@ -893,6 +944,7 @@ void *handleRequest(void *arg) {
             }
 
             if (strcmp(interruptType, "DRAW") == 0) {
+                log("'%s' offered a draw for game '%s'", uname, game->getId().c_str());
                 pthread_mutex_lock(&ctxMutex);
                 if (ctx[sock].opponentInfo == NULL) {
                     memset(buff, 0, BUFF_SIZE);
@@ -918,6 +970,7 @@ void *handleRequest(void *arg) {
             }
 
             if (strcmp(interruptType, "RESTART") == 0) {
+                log("'%s' offered a restart for game '%s'", uname, game->getId().c_str());
                 pthread_mutex_lock(&ctxMutex);
                 if (ctx[sock].opponentInfo == NULL) {
                     game->reset();
@@ -954,6 +1007,8 @@ void *handleRequest(void *arg) {
 
             if (strcmp(interruptType, "DRAW") == 0) {
                 if (strcmp(reply, "ACCEPT") == 0) {
+                    log("'%s' accepted a draw for game '%s'", uname, game->getId().c_str());
+
                     game->acceptDraw(3 - color);
 
                     memset(buff, 0, BUFF_SIZE);
@@ -965,11 +1020,16 @@ void *handleRequest(void *arg) {
 
                     sendMessage(ctx[sock].opponentInfo->socket, "RESULT", buff);
                     saveGame(game);
+                } else {
+                    log("'%s' declined a draw for game '%s'", uname, game->getId().c_str());
                 }
             } else if (strcmp(interruptType, "RESTART") == 0) {
                 if (strcmp(reply, "ACCEPT") == 0) {
+                    log("'%s' agreed to restart the game '%s'", uname, game->getId().c_str());
                     game->reset();
                     setupGame(sock, ctx[sock].opponentInfo->socket, game);
+                } else {
+                    log("'%s' rejected to restart the game '%s'", uname, game->getId().c_str());
                 }
             }
             continue;
@@ -1003,6 +1063,7 @@ void *handleRequest(void *arg) {
 
         // Get history of played games
         if (strcmp(messageType, "HISTRY") == 0) {
+            log("'%s' requested their game history", uname);
             vector < GameRecord * > games = findGamesByPlayer(ctx[sock].selfInfo->account->id);
             memset(payload, 0, 16 * BUFF_SIZE);
             memset(buff, 0, BUFF_SIZE);
@@ -1021,6 +1082,8 @@ void *handleRequest(void *arg) {
         // Get game replay
         if (strcmp(messageType, "REPLAY") == 0) {
             char *id = strtok(payload, "\n");
+            log("'%s' requested the record for game '%s'", uname, id);
+
             GameReplay *replay = getGameReplayInfo(id);
             memset(payload, 0, 16 * BUFF_SIZE);
             sprintf(payload, "%s\n%s\n%s\n%s\n", replay->id.c_str(), replay->log.c_str(),
@@ -1031,6 +1094,8 @@ void *handleRequest(void *arg) {
 
         // Get rankings
         if (strcmp(messageType, "RANKIN") == 0) {
+            log("'%s' requested the rankings table", uname);
+
             vector <pair<int, Account *>> rankings = getRankings();
             string data = "";
             for (auto r: rankings) {
@@ -1045,6 +1110,8 @@ void *handleRequest(void *arg) {
 
         // Get stats
         if (strcmp(messageType, "STATS") == 0) {
+            log("'%s' requested their game statistics", uname);
+
             int playerId = ctx[sock].selfInfo->account->id;
             Stats *stats = getStatsOfPlayer(playerId);
             memset(buff, 0, BUFF_SIZE);
@@ -1057,6 +1124,7 @@ void *handleRequest(void *arg) {
 
         // Log out
         if (strcmp(messageType, "LOGOUT") == 0) {
+            memset(uname, 0, 255);
             handleClientDisconnect(sock);
             continue;
         }

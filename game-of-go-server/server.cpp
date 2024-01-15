@@ -13,6 +13,7 @@
 #include "controller.hpp"
 #include "entity.hpp"
 #include "go_engine.hpp"
+#include "logging.hpp"
 
 using namespace std;
 
@@ -44,14 +45,19 @@ int main() {
     }
 
     printf("Server listening on port %d.\n", PORT);
+    log("Server started");
 
 //    generateMatches(1);
     while (1) {
         clientSocket = accept(serverSocket, (struct sockaddr *) &client, &sinSize);
-        printf("New connection on socket %d\n", clientSocket);
+
+        char addr[24];
+        sprintf(addr, "%s:%d", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+        thread_ctx args = {clientSocket, addr};
+        printf("New connection from %s\n", addr);
 
         pthread_t clientThread;
-        pthread_create(&clientThread, NULL, handleRequest, (void *) &clientSocket);
+        pthread_create(&clientThread, NULL, handleRequest, (void *) &args);
     }
 
     close(serverSocket);
