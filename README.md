@@ -156,8 +156,7 @@ To get a local copy up and running follow these simple example steps.
    ```
    - Start server
    ```sh
-   make clean
-   make
+   make clean all
    ./server
    ```
 4. Start client application
