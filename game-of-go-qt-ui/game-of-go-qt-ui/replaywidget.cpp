@@ -11,6 +11,8 @@
 ReplayWidget::ReplayWidget(
         int boardSize,
         int playerColor,
+        QString blackName,
+        QString whiteName,
         float blackScore,
         float whiteScore,
         QStringList log,
@@ -43,6 +45,8 @@ ReplayWidget::ReplayWidget(
     ui->cmb_speed->setCurrentText("1x");
 
     scoreboard->disableTimeControl();
+    scoreboard->setBlackName(blackName);
+    scoreboard->setWhiteName(whiteName);
 
     timer = new QTimer(this);
     timer->setInterval(speedMillis);

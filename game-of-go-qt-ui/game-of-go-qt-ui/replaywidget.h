@@ -20,6 +20,8 @@ public:
     explicit ReplayWidget(
         int boardSize,
         int playerColor,
+        QString blackName,
+        QString whiteName,
         float blackScore,
         float whiteScore,
         QStringList log,

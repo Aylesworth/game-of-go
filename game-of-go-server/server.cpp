@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+#include <signal.h>
 #include <string>
 #include <set>
 #include "controller.hpp"
@@ -18,6 +19,11 @@
 using namespace std;
 
 #define PORT 8080
+
+void sig_int(int signal) {
+    log("Server closed");
+    exit(EXIT_SUCCESS);
+}
 
 int main() {
     int serverSocket, clientSocket;
@@ -46,6 +52,8 @@ int main() {
 
     printf("Server listening on port %d.\n", PORT);
     log("Server started");
+
+    signal(SIGINT, sig_int);
 
 //    generateMatches(1);
     while (1) {

@@ -30,3 +30,19 @@
 [2024-01-16 03:06:00]: 'abc' offered a restart for game '0UfmGgxmP5POcJDC'
 [2024-01-16 03:06:00]: Game established between 'abc' and '@CPU': 'uqLl4GXZDdom7Ze2'
 [2024-01-16 03:06:37]: 'abc' disconnected
+[2024-01-18 11:41:59]: Server started
+[2024-01-18 11:42:30]: Client 127.0.0.1:43964 sent login request as 'nda2105'
+[2024-01-18 11:42:30]: Client 127.0.0.1:43964 logged in as 'nda2105'
+[2024-01-18 11:42:33]: 'nda2105' requested online player list
+[2024-01-18 11:42:37]: 'nda2105' requested their game statistics
+[2024-01-18 11:42:37]: 'nda2105' requested their game history
+[2024-01-18 11:42:39]: 'nda2105' requested the record for game 'fuswlFhROFGoPInm'
+[2024-01-18 11:43:58]: 'nda2105' requested the rankings table
+[2024-01-18 11:44:07]: 'nda2105' requested their game statistics
+[2024-01-18 11:44:07]: 'nda2105' requested their game history
+[2024-01-18 11:44:08]: 'nda2105' requested the record for game 'MoCOnxPDupR6pAJ2'
+[2024-01-18 11:44:17]: 'nda2105' requested the record for game 'ptDbkYeXe73xfjbN'
+[2024-01-18 11:44:30]: 'nda2105' requested the record for game 'ZuuNtZiqJFe5qrsN'
+[2024-01-18 11:44:41]: 'nda2105' disconnected
+[2024-01-18 11:52:08]: Server started
+[2024-01-18 11:52:09]: Server closed

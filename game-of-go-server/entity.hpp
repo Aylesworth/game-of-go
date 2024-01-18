@@ -40,14 +40,17 @@ struct GameRecord {
 
 struct GameReplay {
     string id;
+    string blackName;
+    string whiteName;
     string log;
     string blackTerritory;
     string whiteTerritory;
 
     GameReplay() {}
 
-    GameReplay(string id, string log, string blackTerritory, string whiteTerritory) :
-            id(id), log(log), blackTerritory(blackTerritory), whiteTerritory(whiteTerritory) {}
+    GameReplay(string id, string blackName, string whiteName, string log, string blackTerritory, string whiteTerritory)
+            : id(id), blackName(blackName), whiteName(whiteName),
+              log(log), blackTerritory(blackTerritory), whiteTerritory(whiteTerritory) {}
 };
 
 struct Stats {
@@ -62,7 +65,8 @@ struct Stats {
 
     Stats() {}
 
-    Stats(int totalMatches, int wins, int losses, int draws, double winningRate, int elo, string rankType, int ranking) :
+    Stats(int totalMatches, int wins, int losses, int draws, double winningRate, int elo, string rankType, int ranking)
+            :
             totalMatches(totalMatches), wins(wins), losses(losses), draws(draws), winningRate(winningRate),
             elo(elo), rankType(rankType), ranking(ranking) {}
 };

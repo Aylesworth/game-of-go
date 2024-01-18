@@ -85,14 +85,18 @@ void HistoryItemWidget::onMessageReceived(QString msgtype, QString payload) {
         QString id = params[0];
         if (id != this->id) return;
 
-        QStringList log = params[1].split(" ", Qt::SkipEmptyParts);
-        QStringList blackTerritory = params[2].split(" ", Qt::SkipEmptyParts);
-        QStringList whiteTerritory = params[3].split(" ", Qt::SkipEmptyParts);
+        QString blackName = params[1];
+        QString whiteName = params[2];
+        QStringList log = params[3].split(" ", Qt::SkipEmptyParts);
+        QStringList blackTerritory = params[4].split(" ", Qt::SkipEmptyParts);
+        QStringList whiteTerritory = params[5].split(" ", Qt::SkipEmptyParts);
 
         MainWindow *w = MainWindow::getInstance();
         w->next(new ReplayWidget(
             boardSize,
             color,
+            blackName,
+            whiteName,
             blackScore,
             whiteScore,
             log,

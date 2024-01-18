@@ -126,7 +126,7 @@ void saveGame(GoGame *game) {
 vector<GameRecord *> findGamesByPlayer(int playerId) {
     auto pstmt = con->prepareStatement(
             "SELECT g.id, g.board_size, p1.id AS black_id, p1.username AS black_name, p2.id AS white_id, p2.username AS white_name, "
-            "black_score, white_score, black_elo_change, white_elo_change, time "
+            "g.black_score, g.white_score, g.black_elo_change, g.white_elo_change, g.time "
             "FROM game g "
             "JOIN account p1 ON p1.id = g.black_player "
             "JOIN account p2 ON p2.id = g.white_player "
@@ -168,13 +168,19 @@ vector<GameRecord *> findGamesByPlayer(int playerId) {
 
 GameReplay *getGameReplayInfo(string gameId) {
     auto pstmt = con->prepareStatement(
-            "SELECT id, log, black_territory, white_territory FROM game WHERE id = ?");
+            "SELECT g.id, g.log, g.black_territory, g.white_territory, p1.username AS black_name, p2.username AS white_name "
+            "FROM game g "
+            "JOIN account p1 ON p1.id = g.black_player "
+            "JOIN account p2 ON p2.id = g.white_player "
+            "WHERE g.id = ?");
     pstmt->setString(1, gameId);
     auto rs = pstmt->executeQuery();
 
     if (rs->next()) {
         return new GameReplay(
                 rs->getString("id"),
+                rs->getString("black_name"),
+                rs->getString("white_name"),
                 rs->getString("log"),
                 rs->getString("black_territory"),
                 rs->getString("white_territory")

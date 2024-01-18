@@ -1086,8 +1086,9 @@ void *handleRequest(void *arg) {
 
             GameReplay *replay = getGameReplayInfo(id);
             memset(payload, 0, 16 * BUFF_SIZE);
-            sprintf(payload, "%s\n%s\n%s\n%s\n", replay->id.c_str(), replay->log.c_str(),
-                    replay->blackTerritory.c_str(), replay->whiteTerritory.c_str());
+            sprintf(payload, "%s\n%s\n%s\n%s\n%s\n%s\n", replay->id.c_str(),
+                    replay->blackName.c_str(), replay->whiteName.c_str(),
+                    replay->log.c_str(), replay->blackTerritory.c_str(), replay->whiteTerritory.c_str());
             sendMessage(sock, "REPLAY", payload);
             continue;
         }
